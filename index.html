@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4b AutoSync (Mobile/X fix)</title>
-  <meta name="description" content="Versão otimizada para mobile. Sem arrastar, picker com busca sem acentos. Slot com nome/peso/lucro em linhas. Botão X fixo no canto superior direito. Lista com edição, filtros e ordenação. Correção de foco.">
+  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4c AutoSync (Mobile + Custo)</title>
+  <meta name="description" content="Versão otimizada para mobile. Sem arrastar; picker com busca sem acentos; slot com nome/peso/lucro. Botão X fixo. Lista com edição, filtros e ordenação. Soma total inclui custo dos produtos.">
   <style>
     :root{ --bg:#f6f7f9; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --primary:#0f172a; --primary-ink:#ffffff; --accent:#10b981; --danger:#ef4444; --danger-ink:#fff; --chip:#111827cc; }
     *{box-sizing:border-box} html,body{height:100%}
@@ -102,7 +102,7 @@
     <div class="header">
       <div style="display:flex;gap:12px;align-items:center">
         <div class="logo">☁️</div>
-        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4b)</h1><div class="sub">Versão otimizada para celular. X fixo no canto superior direito do slot. Sem arrastar.</div></div>
+        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4c)</h1><div class="sub">Mobile otimizado • X no canto do slot • Sem arrastar • Soma inclui <b>custo total</b>.</div></div>
       </div>
       <div><button class="btn" id="btnNewVehicle">+ Novo veículo</button> <button class="btn secondary" id="btnNewProduct">+ Novo produto</button></div>
     </div>
@@ -130,9 +130,10 @@
           </div>
           <div id="truckWrap"></div>
           <div id="truckMsg" class="msg"></div>
-          <div class="stats" style="margin-top:12px;display:grid;gap:12px;grid-template-columns:repeat(4,1fr)">
+          <div class="stats" style="margin-top:12px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
             <div class="stat"><div class="lbl">Lucro total</div><div class="val" id="statProfit">R$ 0,00</div></div>
             <div class="stat"><div class="lbl">Peso total</div><div class="val" id="statWeight">0 kg • 0 t</div></div>
+            <div class="stat"><div class="lbl">Custo total</div><div class="val" id="statCost">R$ 0,00</div></div>
             <div class="stat"><div class="lbl">Frete</div><div class="val" id="statFreight">R$ 0,00</div></div>
             <div class="stat"><div class="lbl">Resultado</div><div class="val" id="statFinal">R$ 0,00</div></div>
           </div>
@@ -209,7 +210,7 @@
     </div>
   </div></dialog>
 
-  <!-- App base + AutoSync + Picker (sem arrastar) + FIX foco/edição + Mobile tweaks -->
+  <!-- App base + AutoSync + Picker (sem arrastar) + Mobile tweaks + Custo total -->
   <script>
     const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>Array.from(e.querySelectorAll(s));
     const brl=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(v)?v:0);
@@ -232,7 +233,7 @@
     function persist(){ store.set('mcalc_tax_percent',state.taxPercent); store.set('mcalc_freight',state.freight); store.set('mcalc_products',state.products); store.set('mcalc_vehicles',state.vehicles); store.set('mcalc_layouts',state.layouts); store.set('mcalc_selected_vehicle',state.selectedVehicleId); store.set('mcalc_expanded',state.expanded); cloudScheduleSave && cloudScheduleSave(); }
 
     const selVehicle=$('#selVehicle'), vehMaxWeight=$('#vehMaxWeight'), truckWrap=$('#truckWrap'), truckMsg=$('#truckMsg'), productsEl=$('#products');
-    const inpTaxPercent=$('#inpTaxPercent'), inpFreight=$('#inpFreight'); const statProfit=$('#statProfit'), statWeight=$('#statWeight'), statFreight=$('#statFreight'), statFinal=$('#statFinal');
+    const inpTaxPercent=$('#inpTaxPercent'), inpFreight=$('#inpFreight'); const statProfit=$('#statProfit'), statWeight=$('#statWeight'), statFreight=$('#statFreight'), statFinal=$('#statFinal'), statCost=$('#statCost');
     const productRows={};
 
     const sortByEl = $('#prodSortBy');
@@ -264,9 +265,11 @@
 
     function ensureLayout(v){ if(!state.layouts[v.id] || state.layouts[v.id].length!==v.capacity){ state.layouts[v.id]=Array(v.capacity).fill(null) } }
     function getSelectedVehicle(){ let v=state.vehicles.find(x=>x.id===state.selectedVehicleId) || state.vehicles[0]; if(!v && state.vehicles.length){ v=state.vehicles[0]; state.selectedVehicleId=v.id } return v||null }
-    function vehicleTotals(v){ ensureLayout(v); const layout=state.layouts[v.id]; let totalProfit=0,totalWeight=0; layout.forEach(pid=>{ if(!pid)return; const p=state.products.find(x=>x.id===pid); if(!p)return; const calc=computeProduct(p,state.taxPercent); totalProfit+=calc.profitPallet; totalWeight+=calc.palletWeightKg; }); return {totalProfit,totalWeight} }
+
+    function vehicleTotals(v){ ensureLayout(v); const layout=state.layouts[v.id]; let totalProfit=0,totalWeight=0,totalCost=0; layout.forEach(pid=>{ if(!pid)return; const p=state.products.find(x=>x.id===pid); if(!p)return; const calc=computeProduct(p,state.taxPercent); totalProfit += calc.profitPallet; totalWeight += calc.palletWeightKg; const costPallet = clamp(toNum(p.buyPrice)) * clamp(toNum(p.unitsPerPallet),1); totalCost += costPallet; }); return { totalProfit, totalWeight, totalCost } }
 
     function renderVehicles(){ selVehicle.innerHTML=''; state.vehicles.forEach(v=>{ const o=document.createElement('option'); o.value=v.id; o.textContent=`${v.name} — ${v.capacity} pallets`; selVehicle.appendChild(o) }); if(state.vehicles.length){ const ok=state.vehicles.some(v=>v.id===state.selectedVehicleId); if(!ok) state.selectedVehicleId=state.vehicles[0].id; selVehicle.value=state.selectedVehicleId } selVehicle.onchange=()=>{ state.selectedVehicleId=selVehicle.value; persist(); renderTruck(); renderTotals(); syncVehLimitInput(); }; syncVehLimitInput(); }
+
     function syncVehLimitInput(){ const v=getSelectedVehicle(); if(!v){ vehMaxWeight.value=0; return } vehMaxWeight.value=v.maxWeightKg||0; vehMaxWeight.oninput=()=>{ v.maxWeightKg=Math.max(0,Math.floor(toNum(vehMaxWeight.value)||0)); persist(); renderTotals(); } }
     function showMsg(txt,type='error'){ truckMsg.textContent=txt; truckMsg.className='msg show '+(type==='error'?'error':'ok'); clearTimeout(showMsg._t); showMsg._t=setTimeout(()=>{truckMsg.className='msg'},2400) }
 
@@ -323,7 +326,7 @@
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn danger" title="Excluir">🗑 Excluir produto</button></div>
           </div>`; productRows[p.id]=row; row.querySelector('[data-toggle]').addEventListener('click',(e)=>{ if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') }); const delBtn=row.querySelector('button[title="Excluir"]'); if(delBtn) delBtn.addEventListener('click',()=>{ state.products=state.products.filter(x=>x.id!==p.id); Object.keys(state.layouts).forEach(vid=>{ state.layouts[vid]=(state.layouts[vid]||[]).map(x=>x===p.id?null:x) }); persist(); renderProducts(); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ p.buyPrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ p.salePrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ p.unitWeightKg=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ p.mlPercent=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); productsEl.appendChild(row); }); if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) } }
 
-    function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`${kgFmt(0)} • ${tonFmt(0)}`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); return } const {totalProfit,totalWeight}=vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${kgFmt(totalWeight)} de ${kgFmt(limit)} • ${tonFmt(totalWeight/1000)}`:`${kgFmt(totalWeight)} • ${tonFmt(totalWeight/1000)}`; statWeight.style.color=exceeded?'#dc2626':''; statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.style.color=final>=0?'#22c55e':'#ef4444'; if(exceeded){ showMsg('Peso total excede o limite deste veículo. Considere remover pallets ou aumentar o limite.','error') } }
+    function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`${kgFmt(0)} • ${tonFmt(0)}`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); statCost.textContent=brl(0); return } const { totalProfit, totalWeight, totalCost } = vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${kgFmt(totalWeight)} de ${kgFmt(limit)} • ${tonFmt(totalWeight/1000)}`:`${kgFmt(totalWeight)} • ${tonFmt(totalWeight/1000)}`; statWeight.style.color=exceeded?'#dc2626':''; statCost.textContent=brl(totalCost); statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.style.color=final>=0?'#22c55e':'#ef4444'; if(exceeded){ showMsg('Peso total excede o limite deste veículo. Considere remover pallets ou aumentar o limite.','error') } }
 
     function render(){ renderVehicles(); renderTruck(); renderProducts(); renderTotals(); }
   </script>
