@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Pallets & Lucro de Frete — v2.3.3 AutoSync</title>
-  <meta name="description" content="Calculadora de pallets com lucro e frete, sincronização em tempo real via Firebase com auto-conexão. Clique no slot vazio para escolher produto, com busca.">
+  <title>Calculadora de Pallets & Lucro de Frete — v2.3.3a AutoSync (fix)</title>
+  <meta name="description" content="Correção da v2.3.3: adicionar produto/veículo funcionando; slots clicáveis com busca; peso e lucro no slot.">
   <style>
     :root{ --bg:#f6f7f9; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --primary:#0f172a; --primary-ink:#ffffff; --accent:#10b981; --danger:#ef4444; --danger-ink:#fff; --chip:#111827cc; }
     *{box-sizing:border-box} html,body{height:100%}
@@ -22,8 +22,6 @@
     .badge{font-size:11px;color:var(--muted)}
     .stats{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)} @media(min-width:768px){.stats{grid-template-columns:repeat(4,1fr)}}
     .stat{background:#fafafa;border:1px solid var(--line);border-radius:14px;padding:10px} .stat .lbl{font-size:11px;color:var(--muted)} .stat .val{font-weight:700}
-
-    /* Caminhão / Slots */
     .truck{position:relative;background:#0b1020;border-radius:24px;color:#fff;padding:16px;border:1px solid #0b1020;box-shadow:0 6px 24px rgba(2,6,23,.35)}
     .truck .cab{position:absolute;left:50%;transform:translateX(-50%);top:-18px;width:160px;height:36px;background:#1f2937;border:1px solid #374151;border-bottom:none;border-top-left-radius:16px;border-top-right-radius:16px}
     .truck .wheels{position:absolute;left:16px;right:16px;top:8px;display:flex;justify-content:space-between}
@@ -32,21 +30,15 @@
     .slot.filled{border-style:solid;border-color:#6ee7b7;cursor:default}
     .slot .title{position:relative;z-index:2;background:rgba(255,255,255,.92);color:#111827;padding:2px 6px;border-radius:8px;font-size:11px;font-weight:700;max-width:95%;text-align:center}
     .slot .tag{position:relative;z-index:2;margin-top:4px;color:#e5e7eb;font-size:10px}
-
-    /* Métricas no slot */
     .slot .metrics{position:absolute;left:6px;right:6px;bottom:6px;display:flex;justify-content:space-between;gap:6px;z-index:2}
     .slot .metric{font-size:11px;display:flex;align-items:center;gap:4px;background:var(--chip);color:#e5e7eb;padding:3px 6px;border-radius:8px}
     .slot .metric .val{font-weight:800}
     .slot .metric .val.good{color:#22c55e}
     .slot .metric .val.bad{color:#ef4444}
-
-    /* Botão X */
     .slot .remove{position:absolute;right:6px;top:6px;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:var(--danger);color:var(--danger-ink);border:none;cursor:pointer;z-index:3;box-shadow:0 2px 6px rgba(0,0,0,.25)}
     .slot .remove:hover{filter:brightness(1.05)}
     .slot .remove:focus{outline:2px solid #fff;outline-offset:2px}
     .slot .remove .x{font-weight:900;font-size:16px;line-height:1}
-
-    /* Modal Produto Picker */
     dialog{border:none;border-radius:16px;box-shadow:0 24px 48px rgba(2,6,23,.35)} dialog::backdrop{background:rgba(0,0,0,.45)}
     .modal .content{padding:16px 18px}
     .picker-head{display:flex;gap:10px;align-items:center;margin-bottom:10px}
@@ -69,7 +61,7 @@
     <div class="header">
       <div style="display:flex;gap:12px;align-items:center">
         <div class="logo">☁️</div>
-        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.3)</h1><div class="sub">Clique no slot vazio para escolher um produto (com busca). Lucro/peso no slot e botão X para remover.</div></div>
+        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.3a - fix)</h1><div class="sub">Correção de bug na criação de produto + slots clicáveis com busca, peso/lucro no slot e botão X.</div></div>
       </div>
       <div><button class="btn" id="btnNewVehicle">+ Novo veículo</button> <button class="btn secondary" id="btnNewProduct">+ Novo produto</button></div>
     </div>
@@ -149,7 +141,7 @@
     </div>
   </div></dialog>
 
-  <!-- App base + AutoSync + Slot metrics + Picker -->
+  <!-- App base + AutoSync + Picker -->
   <script>
     const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>Array.from(e.querySelectorAll(s));
     const brl=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(v)?v:0);
@@ -161,42 +153,42 @@
     function computeProduct(p,taxPercent){ const mlPercent=clamp(toNum(p.mlPercent)); const sale=clamp(toNum(p.salePrice)); const buy=clamp(toNum(p.buyPrice)); const fixed=fixedML(sale); const mlPctVal=sale*mlPercent/100; const taxVal=sale*clamp(toNum(taxPercent))/100; const profitUnit=sale-buy-fixed-mlPctVal-taxVal; const profitPallet=profitUnit*clamp(toNum(p.unitsPerPallet),1); const palletWeightKg=clamp(toNum(p.unitWeightKg))*clamp(toNum(p.unitsPerPallet),1); return {sale,buy,fixed,mlPctVal,taxVal,profitUnit,profitPallet,palletWeightKg,mlPercent} }
 
     const store={ get(k,f){try{const v=JSON.parse(localStorage.getItem(k));return (v===null||v===undefined)?f:v}catch(e){return f}}, set(k,v){localStorage.setItem(k,JSON.stringify(v))} };
-    let state={ taxPercent:store.get('mcalc_tax_percent',10), freight:store.get('mcalc_freight',0), products:store.get('mcalc_products',[{id:uid('prod'),name:'Suco Laranja 1,7L',buyPrice:11.79,salePrice:19.90,unitsPerPallet:540,unitWeightKg:1.75,colorIdx:0,mlPercent:14}]), vehicles:store.get('mcalc_vehicles',(()=>{const v1c=2,v2c=6;const g1=bestGrid(v1c),g2=bestGrid(v2c);return[{id:uid('veh'),name:'Ranger',capacity:v1c,rows:g1.rows,cols:g1.cols,createdAt:Date.now(),maxWeightKg:0},{id:uid('veh'),name:'Caminhão 6 pallets',capacity:v2c,rows:g2.rows,cols:g2.cols,createdAt:Date.now(),maxWeightKg:0}]})()), layouts:store.get('mcalc_layouts',{}), selectedVehicleId:store.get('mcalc_selected_vehicle',null), expanded:{} };
 
-    function persist(){ store.set('mcalc_tax_percent',state.taxPercent); store.set('mcalc_freight',state.freight); store.set('mcalc_products',state.products); store.set('mcalc_vehicles',state.vehicles); store.set('mcalc_layouts',state.layouts); store.set('mcalc_selected_vehicle',state.selectedVehicleId); cloudScheduleSave && cloudScheduleSave(); }
+    // Carrega estado com chaves antigas (compat)
+    let state={ taxPercent:store.get('mcalc_tax_percent',10), freight:store.get('mcalc_freight',0), products:store.get('mcalc_products',null), vehicles:store.get('mcalc_vehicles',null), layouts:store.get('mcalc_layouts',{}), selectedVehicleId:store.get('mcalc_selected_vehicle',null), expanded:store.get('mcalc_expanded',{}) };
+    if(!Array.isArray(state.products)) state.products=[{id:uid('prod'),name:'Suco Laranja 1,7L',buyPrice:11.79,salePrice:19.90,unitsPerPallet:540,unitWeightKg:1.75,colorIdx:0,mlPercent:14}];
+    if(!Array.isArray(state.vehicles)){
+      const v1c=2,v2c=6; const g1=bestGrid(v1c),g2=bestGrid(v2c);
+      state.vehicles=[{id:uid('veh'),name:'Ranger',capacity:v1c,rows:g1.rows,cols:g1.cols,createdAt:Date.now(),maxWeightKg:0},{id:uid('veh'),name:'Caminhão 6 pallets',capacity:v2c,rows:g2.rows,cols:g2.cols,createdAt:Date.now(),maxWeightKg:0}];
+    }
+
+    function persist(){ store.set('mcalc_tax_percent',state.taxPercent); store.set('mcalc_freight',state.freight); store.set('mcalc_products',state.products); store.set('mcalc_vehicles',state.vehicles); store.set('mcalc_layouts',state.layouts); store.set('mcalc_selected_vehicle',state.selectedVehicleId); store.set('mcalc_expanded',state.expanded); cloudScheduleSave && cloudScheduleSave(); }
 
     const selVehicle=$('#selVehicle'), vehMaxWeight=$('#vehMaxWeight'), truckWrap=$('#truckWrap'), truckMsg=$('#truckMsg'), productsEl=$('#products');
     const inpTaxPercent=$('#inpTaxPercent'), inpFreight=$('#inpFreight'); const statProfit=$('#statProfit'), statWeight=$('#statWeight'), statFreight=$('#statFreight'), statFinal=$('#statFinal');
     const productRows={};
 
-    // Picker state
     let pickerSlotIndex = null;
 
     function initControls(){
-      if(inpTaxPercent){ inpTaxPercent.value=state.taxPercent; inpFreight.value=state.freight; }
-      if(inpTaxPercent){ inpTaxPercent.addEventListener('input',()=>{ state.taxPercent=toNum(inpTaxPercent.value); persist(); renderTotals(); renderTruck(); Object.values(productRows).forEach(row=>{ const id=row.dataset.id; const p=state.products.find(x=>x.id===id); if(p) updateProductUI(p,row) }) }); }
+      if(inpTaxPercent){ inpTaxPercent.value=state.taxPercent; } if(inpFreight){ inpFreight.value=state.freight; }
+      if(inpTaxPercent){ inpTaxPercent.addEventListener('input',()=>{ state.taxPercent=toNum(inpTaxPercent.value); persist(); renderTotals(); renderTruck(); }); }
       if(inpFreight){ inpFreight.addEventListener('input',()=>{ state.freight=toNum(inpFreight.value); persist(); renderTotals(); }); }
-      $('#btnReset') && $('#btnReset').addEventListener('click',()=>{ state.taxPercent=10; state.freight=0; if(inpTaxPercent) inpTaxPercent.value=state.taxPercent; if(inpFreight) inpFreight.value=state.freight; persist(); renderTotals(); renderTruck(); Object.values(productRows).forEach(row=>{ const id=row.dataset.id; const p=state.products.find(x=>x.id===id); if(p) updateProductUI(p,row) }) });
       $('#btnClearLoad') && $('#btnClearLoad').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; ensureLayout(v); state.layouts[v.id]=Array(v.capacity).fill(null); persist(); renderTruck(); renderTotals(); });
       $('#btnDeleteVehicle') && $('#btnDeleteVehicle').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; state.vehicles=state.vehicles.filter(x=>x.id!==v.id); delete state.layouts[v.id]; state.selectedVehicleId=(state.vehicles[0]&&state.vehicles[0].id)||null; persist(); renderVehicles(); renderTruck(); renderTotals(); });
       const openVeh=()=>$('#dlgVehicle').showModal(); $('#btnNewVehicle')&&$('#btnNewVehicle').addEventListener('click',openVeh); $('#btnQuickNewVehicle')&&$('#btnQuickNewVehicle').addEventListener('click',openVeh); $('#btnNewProduct')&&$('#btnNewProduct').addEventListener('click',()=>$('#dlgProduct').showModal()); $('#btnNewProduct2')&&$('#btnNewProduct2').addEventListener('click',()=>$('#dlgProduct').showModal());
       $$('#dlgVehicle [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgVehicle').close())); $$('#dlgProduct [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgProduct').close()));
       $('#vehAdd')&&$('#vehAdd').addEventListener('click',()=>{ const name=$('#vehName').value.trim()||undefined; const cap=Math.max(1,Math.floor(toNum($('#vehCap').value)||1)); const limit=Math.max(0,Math.floor(toNum($('#vehLimit').value)||0)); const grid=bestGrid(cap); const veh={id:uid('veh'),name:name||`Veículo (${cap} pallets)`,capacity:cap,rows:grid.rows,cols:grid.cols,createdAt:Date.now(),maxWeightKg:limit}; state.vehicles.push(veh); state.selectedVehicleId=veh.id; ensureLayout(veh); $('#vehName').value=''; $('#vehCap').value='2'; $('#vehLimit').value='0'; persist(); renderVehicles(); renderTruck(); renderTotals(); $('#dlgVehicle').close(); });
-      $('#prodAdd')&&$('#prodAdd').addEventListener('click',()=>{ const prod={ id:uid('prod'), name:$('#prodName').value.trim()||'Produto novo', buyPrice:toNum($('#prodBuy').value), salePrice:toNum($('#prodSale').value), unitsPerPallet:Math.max(1,Math.floor(toNum($('#prodUnits').value)||1)), unitWeightKg=toNum($('#prodWeight').value), colorIdx:Math.floor(Math.random()*6), mlPercent:toNum($('#prodMlPct').value)||14 }; state.products.push(prod); $('#prodName').value=''; $('#prodBuy').value=''; $('#prodSale').value=''; $('#prodUnits').value=''; $('#prodWeight').value=''; $('#prodMlPct').value=''; persist(); renderProducts(); renderTotals(); renderTruck(); $('#dlgProduct').close(); });
-
-      // Picker close buttons
+      $('#prodAdd')&&$('#prodAdd').addEventListener('click',()=>{ const prod={ id:uid('prod'), name:$('#prodName').value.trim()||'Produto novo', buyPrice:toNum($('#prodBuy').value), salePrice:toNum($('#prodSale').value), unitsPerPallet:Math.max(1,Math.floor(toNum($('#prodUnits').value)||1)), unitWeightKg:toNum($('#prodWeight').value), colorIdx:Math.floor(Math.random()*6), mlPercent:toNum($('#prodMlPct').value)||14 }; state.products.push(prod); $('#prodName').value=''; $('#prodBuy').value=''; $('#prodSale').value=''; $('#prodUnits').value=''; $('#prodWeight').value=''; $('#prodMlPct').value=''; persist(); renderProducts(); renderTotals(); renderTruck(); $('#dlgProduct').close(); });
       $$('#dlgPicker [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgPicker').close()));
-      // Search
       $('#pickerSearch')&&$('#pickerSearch').addEventListener('input',()=>renderPickerList());
     }
 
     function ensureLayout(v){ if(!state.layouts[v.id] || state.layouts[v.id].length!==v.capacity){ state.layouts[v.id]=Array(v.capacity).fill(null) } }
     function getSelectedVehicle(){ let v=state.vehicles.find(x=>x.id===state.selectedVehicleId) || state.vehicles[0]; if(!v && state.vehicles.length){ v=state.vehicles[0]; state.selectedVehicleId=v.id } return v||null }
-
     function vehicleTotals(v){ ensureLayout(v); const layout=state.layouts[v.id]; let totalProfit=0,totalWeight=0; layout.forEach(pid=>{ if(!pid)return; const p=state.products.find(x=>x.id===pid); if(!p)return; const calc=computeProduct(p,state.taxPercent); totalProfit+=calc.profitPallet; totalWeight+=calc.palletWeightKg; }); return {totalProfit,totalWeight} }
 
     function renderVehicles(){ selVehicle.innerHTML=''; state.vehicles.forEach(v=>{ const o=document.createElement('option'); o.value=v.id; o.textContent=`${v.name} — ${v.capacity} pallets`; selVehicle.appendChild(o) }); if(state.vehicles.length){ const ok=state.vehicles.some(v=>v.id===state.selectedVehicleId); if(!ok) state.selectedVehicleId=state.vehicles[0].id; selVehicle.value=state.selectedVehicleId } selVehicle.onchange=()=>{ state.selectedVehicleId=selVehicle.value; persist(); renderTruck(); renderTotals(); syncVehLimitInput(); }; syncVehLimitInput(); }
-
     function syncVehLimitInput(){ const v=getSelectedVehicle(); if(!v){ vehMaxWeight.value=0; return } vehMaxWeight.value=v.maxWeightKg||0; vehMaxWeight.oninput=()=>{ v.maxWeightKg=Math.max(0,Math.floor(toNum(vehMaxWeight.value)||0)); persist(); renderTotals(); } }
 
     function showMsg(txt,type='error'){ truckMsg.textContent=txt; truckMsg.className='msg show '+(type==='error'?'error':'ok'); clearTimeout(showMsg._t); showMsg._t=setTimeout(()=>{truckMsg.className='msg'},2400) }
@@ -209,11 +201,9 @@
       <div class="pstats">
         <span class="chip">⚖️ ${kgFmt(calc.palletWeightKg)}</span>
         <span class="pp ${calc.profitPallet>0?'good':(calc.profitPallet<0?'bad':'')}">💰 ${brl(calc.profitPallet)}</span>
-      </div>`;
-      item.addEventListener('click',()=>{ if(pickerSlotIndex==null)return; const layout=state.layouts[v.id]; const {totalWeight}=vehicleTotals(v); const next=totalWeight+calc.palletWeightKg; if(v.maxWeightKg>0 && next>v.maxWeightKg){ showMsg('Não é possível adicionar: limite de peso do veículo seria excedido.','error'); return } layout[pickerSlotIndex]=p.id; persist(); renderTruck(); renderTotals(); $('#dlgPicker').close(); });
-      list.appendChild(item); count++; }); $('#pickerCount').textContent = `${count} produto(s)`; if(count===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto encontrado.'; list.appendChild(empty) } }
+      </div>`; item.addEventListener('click',()=>{ if(pickerSlotIndex==null)return; const layout=state.layouts[v.id]; const {totalWeight}=vehicleTotals(v); const next=totalWeight+calc.palletWeightKg; if(v.maxWeightKg>0 && next>v.maxWeightKg){ showMsg('Não é possível adicionar: limite de peso do veículo seria excedido.','error'); return } layout[pickerSlotIndex]=p.id; persist(); renderTruck(); renderTotals(); $('#dlgPicker').close(); }); list.appendChild(item); count++; }); $('#pickerCount').textContent=`${count} produto(s)`; if(count===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto encontrado.'; list.appendChild(empty) } }
 
-    function renderTruck(){ const v=getSelectedVehicle(); if(!v){ truckWrap.innerHTML='<div class="badge">Nenhum veículo cadastrado.</div>'; return } ensureLayout(v); const layout=state.layouts[v.id]; const gridStyle=`display:grid;gap:8px;grid-template-columns:repeat(${v.cols},minmax(0,1fr));`; let slots=''; for(let i=0;i<layout.length;i++){ const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner='<div class="badge" style="color:#94a3b8">Clique para adicionar</div>'; if(filled){ const calc=computeProduct(prod,state.taxPercent); const profitClass = calc.profitPallet>0 ? 'good' : (calc.profitPallet<0 ? 'bad' : ''); inner=`
+    function renderTruck(){ const v=getSelectedVehicle(); if(!v){ truckWrap.innerHTML='<div class="badge">Nenhum veículo cadastrado.</div>'; return } ensureLayout(v); const layout=state.layouts[v.id]; const gridStyle=`display:grid;gap:8px;grid-template-columns:repeat(${v.cols},minmax(0,1fr));`; let slots=''; for(let i=0;i<layout.length;i++){ const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner='<div class="badge" style="color:#94a3b8">Clique para adicionar</div>'; if(filled){ const calc=computeProduct(prod,state.taxPercent); const profitClass=calc.profitPallet>0?'good':(calc.profitPallet<0?'bad':''); inner=`
           <button class="remove" title="Remover pallet" aria-label="Remover pallet" data-remove="${i}"><span class="x">×</span></button>
           <div class="title">${prod.name}</div>
           <div class="tag">1 pallet</div>
@@ -223,16 +213,8 @@
           </div>` }
         slots+=`<div class="slot ${filled?'filled':''}" data-slot="${i}" draggable="false"><div style="position:relative;z-index:2;text-align:center">${inner}</div></div>` }
       truckWrap.innerHTML=`<div class="truck"><div class="cab"></div><div class="wheels"><div class="wheel"></div><div class="wheel"></div></div><div class="badge" style="color:#cbd5e1;margin-bottom:6px">Capacidade: ${v.capacity} pallets • Grade: ${v.rows}×${v.cols}${v.maxWeightKg>0?` • Limite: ${kgFmt(v.maxWeightKg)}`:''}</div><div style="${gridStyle}">${slots}</div></div>`;
-      // DnD
-      $$('.slot',truckWrap).forEach(el=>{ el.addEventListener('dragover',e=>e.preventDefault()); el.addEventListener('drop',e=>{ e.preventDefault(); const pid=e.dataTransfer.getData('text/productId'); const idx=Number(el.dataset.slot); if(!pid)return; const p=state.products.find(x=>x.id===pid); if(!p)return; const calc=computeProduct(p,state.taxPercent); const {totalWeight}=vehicleTotals(v); const next=totalWeight+calc.palletWeightKg; if(v.maxWeightKg>0 && next>v.maxWeightKg){ showMsg('Não é possível adicionar: limite de peso do veículo seria excedido.','error'); return } layout[idx]=pid; persist(); renderTruck(); renderTotals(); });
-        // Clique em slot vazio → abrir picker
-        if(!el.classList.contains('filled')){
-          el.addEventListener('click',()=>{ const idx=Number(el.dataset.slot); openPicker(idx) });
-        }
-      });
-      // Remover
-      $$('button[data-remove]',truckWrap).forEach(btn=>btn.addEventListener('click',()=>{ const idx=Number(btn.getAttribute('data-remove')); layout[idx]=null; persist(); renderTruck(); renderTotals(); }))
-    }
+      $$('.slot',truckWrap).forEach(el=>{ el.addEventListener('dragover',e=>e.preventDefault()); el.addEventListener('drop',e=>{ e.preventDefault(); const pid=e.dataTransfer.getData('text/productId'); const idx=Number(el.dataset.slot); if(!pid)return; const p=state.products.find(x=>x.id===pid); if(!p)return; const calc=computeProduct(p,state.taxPercent); const {totalWeight}=vehicleTotals(v); const next=totalWeight+calc.palletWeightKg; if(v.maxWeightKg>0 && next>v.maxWeightKg){ showMsg('Não é possível adicionar: limite de peso do veículo seria excedido.','error'); return } layout[idx]=p.id; persist(); renderTruck(); renderTotals(); }); if(!el.classList.contains('filled')){ el.addEventListener('click',()=>{ const idx=Number(el.dataset.slot); openPicker(idx) }); } });
+      $$('button[data-remove]',truckWrap).forEach(btn=>btn.addEventListener('click',()=>{ const idx=Number(btn.getAttribute('data-remove')); layout[idx]=null; persist(); renderTruck(); renderTotals(); })) }
 
     function renderProducts(){ productsEl.innerHTML=''; for(const k in productRows) delete productRows[k]; if(!Array.isArray(state.products)) state.products=[]; state.products.forEach(p=>{ const row=document.createElement('div'); row.className='product'+(state.expanded[p.id]?' open':''); row.dataset.id=p.id; row.innerHTML=`
       <div class="row1" data-toggle>
@@ -254,98 +236,30 @@
         </div>
       </div>`; productRows[p.id]=row; row.querySelector('[data-toggle]').addEventListener('click',e=>{ if(e.target && e.target.classList && e.target.classList.contains('drag')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') }); row.querySelector('.drag').addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/productId',p.id) }); row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ p.buyPrice=toNum(e.target.value); persist(); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ p.salePrice=toNum(e.target.value); persist(); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ p.unitWeightKg=toNum(e.target.value); persist(); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ p.mlPercent=toNum(e.target.value); persist(); renderTotals(); renderTruck(); }); productsEl.appendChild(row); }); if(state.products.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto cadastrado. Clique em “+ Adicionar produto”.'; productsEl.appendChild(empty) } }
 
-    function updateProductUI(p,row){ /* placeholder para futuras atualizações no card */ }
-
     function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`${kgFmt(0)} • ${tonFmt(0)}`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); return } const {totalProfit,totalWeight}=vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${kgFmt(totalWeight)} de ${kgFmt(limit)} • ${tonFmt(totalWeight/1000)}`:`${kgFmt(totalWeight)} • ${tonFmt(totalWeight/1000)}`; statWeight.style.color=exceeded?'#dc2626':''; statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.style.color=final>=0?'#22c55e':'#ef4444'; if(exceeded){ showMsg('Peso total excede o limite deste veículo. Considere remover pallets ou aumentar o limite.','error') } }
 
     function render(){ renderVehicles(); renderTruck(); renderProducts(); renderTotals(); }
   </script>
 
-  <!-- Firebase SDKs + AutoConnect -->
   <script type="module">
     import { initializeApp, deleteApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-
     let app=null, db=null, unsub=null, wsRef=null, isApplyingRemote=false, saveT=null, lastRemoteStamp=0;
-
     const $=(s,e=document)=>e.querySelector(s);
-    const syncStatus=$('#syncStatus');
-    const wsIdEl=$('#wsId');
-    const fbConfigEl=$('#fbConfig');
-    const btnConnect=$('#btnConnect');
-    const btnDisconnect=$('#btnDisconnect');
-
+    const syncStatus=$('#syncStatus'); const wsIdEl=$('#wsId'); const fbConfigEl=$('#fbConfig'); const btnConnect=$('#btnConnect'); const btnDisconnect=$('#btnDisconnect');
     function setStatus(txt){ syncStatus.textContent=txt }
-
-    function localSnapshot(){
-      return { taxPercent: state.taxPercent, freight: state.freight, products: state.products, vehicles: state.vehicles, layouts: state.layouts, selectedVehicleId: state.selectedVehicleId, expanded: state.expanded||{}, updatedAt: Date.now() };
-    }
-
+    function localSnapshot(){ return { taxPercent: state.taxPercent, freight: state.freight, products: state.products, vehicles: state.vehicles, layouts: state.layouts, selectedVehicleId: state.selectedVehicleId, expanded: state.expanded||{}, updatedAt: Date.now() } }
     async function cloudSaveNow(){ if(!wsRef) return; try{ await setDoc(wsRef, localSnapshot(), { merge:true }) }catch(e){ console.warn('Falha ao salvar na nuvem:', e?.message) } }
-
     function cloudScheduleSave(){ if(!wsRef||isApplyingRemote) return; clearTimeout(saveT); saveT=setTimeout(cloudSaveNow, 350) }
-
-    function applyRemote(data){
-      isApplyingRemote = true;
-      try{
-        if((data.updatedAt||0) <= lastRemoteStamp) return;
-        lastRemoteStamp = data.updatedAt||Date.now();
-        state.taxPercent = data.taxPercent ?? state.taxPercent;
-        state.freight = data.freight ?? state.freight;
-        state.products = Array.isArray(data.products) ? data.products : state.products;
-        state.vehicles = Array.isArray(data.vehicles) ? data.vehicles : state.vehicles;
-        state.layouts = data.layouts || state.layouts;
-        state.selectedVehicleId = data.selectedVehicleId ?? state.selectedVehicleId;
-        state.expanded = data.expanded || {};
-        persist();
-        render();
-      } finally {
-        isApplyingRemote = false;
-      }
-    }
-
-    function subscribe(){ if(unsub) unsub(); unsub = onSnapshot(wsRef, (snap)=>{ if(!snap.exists()){ cloudSaveNow(); return } const data=snap.data()||{}; applyRemote(data); setStatus('Conectado ✓'); }, (err)=>{ console.error(err); setStatus('Erro de sincronização'); }); }
-
-    async function connect(){
-      const wsId = (wsIdEl.value||'').trim();
-      if(!wsId){ alert('Informe um Espaço de trabalho.'); return }
-      let cfg; try{ cfg = JSON.parse(fbConfigEl.value||'{}'); }catch(e){ alert('Config Firebase inválida (JSON).'); return }
-      if(!cfg || !cfg.apiKey || !cfg.projectId){ alert('Preencha a config Firebase completa (apiKey, projectId, authDomain, appId, etc).'); return }
-
-      try{
-        localStorage.setItem('mcalc_ws_id', JSON.stringify(wsId));
-        localStorage.setItem('mcalc_fb_cfg', fbConfigEl.value||'');
-        if(getApps().length){ app = getApps()[0]; } else { app = initializeApp(cfg); }
-        db = getFirestore(app);
-        wsRef = doc(db, 'workspaces', wsId);
-        subscribe();
-        setStatus('Conectado ao espaço: '+wsId);
-      }catch(e){ console.error(e); alert('Erro ao conectar ao Firebase: '+e.message); setStatus('Falha na conexão'); }
-    }
-
-    function disconnect(){ try{ if(unsub) unsub(); unsub=null; }catch{} try{ if(app) deleteApp(app); }catch{} app=null; db=null; wsRef=null; setStatus('Desconectado'); }
-
-    // Expor para app base
-    window.cloudScheduleSave = cloudScheduleSave;
-
-    // Ligações de UI
-    btnConnect && btnConnect.addEventListener('click', connect);
-    btnDisconnect && btnDisconnect.addEventListener('click', disconnect);
-
-    // Auto-preencher + Auto-conectar
-    const savedWs = localStorage.getItem('mcalc_ws_id');
-    const savedCfg = localStorage.getItem('mcalc_fb_cfg');
-    if(savedWs && savedCfg){ try{ wsIdEl.value = JSON.parse(savedWs)||'' }catch{} fbConfigEl.value = savedCfg; }
-    if((wsIdEl.value||'').trim() && (fbConfigEl.value||'').trim()){
-      setTimeout(()=>connect(), 200);
-    }
-
-    wsIdEl && wsIdEl.addEventListener('input', ()=> localStorage.setItem('mcalc_ws_id', JSON.stringify(wsIdEl.value||'')));
-    fbConfigEl && fbConfigEl.addEventListener('input', ()=> localStorage.setItem('mcalc_fb_cfg', fbConfigEl.value||''));
-
-    // Inicializar app
-    if(typeof initControls === 'function') initControls();
-    if(typeof render === 'function') render();
+    function applyRemote(data){ isApplyingRemote=true; try{ if((data.updatedAt||0)<=lastRemoteStamp) return; lastRemoteStamp=data.updatedAt||Date.now(); state.taxPercent=data.taxPercent??state.taxPercent; state.freight=data.freight??state.freight; state.products=Array.isArray(data.products)?data.products:state.products; state.vehicles=Array.isArray(data.vehicles)?data.vehicles:state.vehicles; state.layouts=data.layouts||state.layouts; state.selectedVehicleId=data.selectedVehicleId??state.selectedVehicleId; state.expanded=data.expanded||{}; persist(); render() } finally { isApplyingRemote=false } }
+    function subscribe(){ if(unsub) unsub(); unsub=onSnapshot(wsRef,(snap)=>{ if(!snap.exists()){ cloudSaveNow(); return } applyRemote(snap.data()||{}); setStatus('Conectado ✓') }, (err)=>{ console.error(err); setStatus('Erro de sincronização') }) }
+    async function connect(){ const wsId=(wsIdEl.value||'').trim(); if(!wsId){ alert('Informe um Espaço de trabalho.'); return } let cfg; try{ cfg=JSON.parse(fbConfigEl.value||'{}') }catch(e){ alert('Config Firebase inválida (JSON).'); return } if(!cfg || !cfg.apiKey || !cfg.projectId){ alert('Preencha a config Firebase completa (apiKey, projectId, authDomain, appId, etc).'); return } try{ localStorage.setItem('mcalc_ws_id', JSON.stringify(wsId)); localStorage.setItem('mcalc_fb_cfg', fbConfigEl.value||''); if(getApps().length){ app=getApps()[0] } else { app=initializeApp(cfg) } db=getFirestore(app); wsRef=doc(db,'workspaces',wsId); subscribe(); setStatus('Conectado ao espaço: '+wsId); }catch(e){ console.error(e); alert('Erro ao conectar ao Firebase: '+e.message); setStatus('Falha na conexão') } }
+    function disconnect(){ try{ if(unsub) unsub(); unsub=null }catch{} try{ if(app) deleteApp(app) }catch{} app=null; db=null; wsRef=null; setStatus('Desconectado') }
+    window.cloudScheduleSave=cloudScheduleSave; btnConnect&&btnConnect.addEventListener('click', connect); btnDisconnect&&btnDisconnect.addEventListener('click', disconnect);
+    const savedWs=localStorage.getItem('mcalc_ws_id'); const savedCfg=localStorage.getItem('mcalc_fb_cfg'); if(savedWs && savedCfg){ try{ wsIdEl.value=JSON.parse(savedWs)||'' }catch{} fbConfigEl.value=savedCfg; } if((wsIdEl.value||'').trim() && (fbConfigEl.value||'').trim()){ setTimeout(()=>connect(), 200) }
+    wsIdEl&&wsIdEl.addEventListener('input', ()=> localStorage.setItem('mcalc_ws_id', JSON.stringify(wsIdEl.value||'')));
+    fbConfigEl&&fbConfigEl.addEventListener('input', ()=> localStorage.setItem('mcalc_fb_cfg', fbConfigEl.value||''));
+    if(typeof initControls==='function') initControls(); if(typeof render==='function') render();
   </script>
 </body>
 </html>
