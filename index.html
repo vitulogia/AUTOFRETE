@@ -4,40 +4,40 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4 AutoSync</title>
-  <meta name="description" content="Sem arrastar: clique no slot vazio para escolher produto (busca sem acentos). Slot exibe nome, peso e lucro em linhas. Lista de produtos com edição ao clicar, filtros e ordenação.">
+  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4b AutoSync (Mobile/X fix)</title>
+  <meta name="description" content="Versão otimizada para mobile. Sem arrastar, picker com busca sem acentos. Slot com nome/peso/lucro em linhas. Botão X fixo no canto superior direito. Lista com edição, filtros e ordenação. Correção de foco.">
   <style>
     :root{ --bg:#f6f7f9; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --primary:#0f172a; --primary-ink:#ffffff; --accent:#10b981; --danger:#ef4444; --danger-ink:#fff; --chip:#111827cc; }
     *{box-sizing:border-box} html,body{height:100%}
     body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;background:linear-gradient(#fff,var(--bg));color:var(--ink)}
     .container{max-width:1200px;margin:0 auto;padding:20px}
-    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
     .logo{width:40px;height:40px;border-radius:14px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(2,6,23,.25)}
     .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);} .card>.content{padding:16px}
-    .btn{border:0;border-radius:12px;padding:8px 12px;background:var(--primary);color:var(--primary-ink);cursor:pointer}
+    .btn{border:0;border-radius:12px;padding:10px 14px;background:var(--primary);color:var(--primary-ink);cursor:pointer}
     .btn.secondary{background:#f3f4f6;color:#111827} .btn.danger{background:#fee2e2;color:#b91c1c}
-    .input,select{border:1px solid var(--line);border-radius:12px;padding:8px 10px;width:100%}
+    .input,select{border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
     .sub{font-size:12px;color:var(--muted)} h1{margin:0;font-size:22px}
     .grid{display:grid;gap:12px} .grid.cols-4{grid-template-columns:repeat(4,1fr)} .grid.cols-2{grid-template-columns:1fr 1fr}
     .badge{font-size:11px;color:var(--muted)}
 
     /* Caminhão / Slots */
-    .truck{position:relative;background:#0b1020;border-radius:24px;color:#fff;padding:16px;border:1px solid #0b1020;box-shadow:0 6px 24px rgba(2,6,23,.35)}
+    .truck{position:relative;background:#0b1020;border-radius:24px;color:#fff;padding:16px;border:1px solid #0b1020;box-shadow:0 6px 24px rgba(2,6,23,.35);overflow-x:auto}
     .truck .cab{position:absolute;left:50%;transform:translateX(-50%);top:-18px;width:160px;height:36px;background:#1f2937;border:1px solid #374151;border-bottom:none;border-top-left-radius:16px;border-top-right-radius:16px}
     .truck .wheels{position:absolute;left:16px;right:16px;top:8px;display:flex;justify-content:space-between}
     .truck .wheel{width:24px;height:24px;border-radius:50%;background:#374151}
-    .slot{position:relative;aspect-ratio:1/1;border:2px dashed #4b5563;border-radius:12px;background:#111827;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
+    .slot{position:relative;aspect-ratio:1/1;border:2px dashed #4b5563;border-radius:12px;background:#111827;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;min-width:110px}
     .slot.filled{border-style:solid;border-color:#6ee7b7;cursor:default}
 
     /* Conteúdo em linhas dentro do slot */
-    .slotlines{position:relative;z-index:2;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;text-align:center;max-width:95%}
-    .slotlines .name{background:rgba(255,255,255,.92);color:#111827;padding:2px 6px;border-radius:8px;font-size:11px;font-weight:700}
-    .slotlines .weight{color:#e5e7eb;font-size:12px}
+    .slotlines{position:relative;z-index:2;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;text-align:center;max-width:95%;padding-top:30px}
+    .slotlines .name{background:rgba(255,255,255,.92);color:#111827;padding:3px 8px;border-radius:8px;font-size:12px;font-weight:700}
+    .slotlines .weight{color:#e5e7eb;font-size:13px}
     .slotlines .profit{font-weight:800}
     .profit.good{color:#22c55e} .profit.bad{color:#ef4444}
 
-    /* Botão X */
-    .slot .remove{position:absolute;right:6px;top:6px;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:var(--danger);color:var(--danger-ink);border:none;cursor:pointer;z-index:3;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+    /* Botão X (sempre top-right do slot) */
+    .slot .remove{position:absolute;right:6px;top:6px;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:var(--danger);color:var(--danger-ink);border:none;cursor:pointer;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,.25)}
     .slot .remove:hover{filter:brightness(1.05)}
     .slot .remove:focus{outline:2px solid #fff;outline-offset:2px}
     .slot .remove .x{font-weight:900;font-size:16px;line-height:1}
@@ -50,9 +50,9 @@
     .picker-head{display:flex;gap:10px;align-items:center;margin-bottom:10px}
     .picker-head .title{font-weight:800}
     .picker-body{display:flex;flex-direction:column;gap:10px;max-height:60vh;min-width:360px}
-    .search{border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+    .search{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
     .picker-list{display:flex;flex-direction:column;gap:8px;overflow:auto}
-    .pitem{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:8px;cursor:pointer;background:#fff}
+    .pitem{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;background:#fff}
     .pitem:hover{background:#f8fafc}
     .pname{font-weight:700;font-size:14px}
     .pmeta{font-size:12px;color:#64748b}
@@ -65,7 +65,7 @@
     .prod-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
     .prod-controls{display:flex;flex-wrap:wrap;gap:8px}
     .product{border-bottom:1px solid var(--line);} 
-    .product .row1{display:flex;gap:12px;align-items:center;padding:10px 0;cursor:pointer}
+    .product .row1{display:flex;gap:12px;align-items:center;padding:12px 0;cursor:pointer}
     .product .swatch{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:#eef2ff}
     .product .name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .muted{color:var(--muted);font-size:12px}
@@ -73,6 +73,28 @@
     .product.open .body{display:block}
     .chev{font-size:12px;color:#6b7280;transition:transform .2s ease} 
     .product.open .chev{transform:rotate(90deg)}
+
+    /* Mobile tweaks */
+    @media (max-width: 768px){
+      .container{padding:12px}
+      h1{font-size:18px}
+      .grid.cols-4{grid-template-columns:1fr}
+      .grid.cols-2{grid-template-columns:1fr}
+      .header>div:last-child{width:100%;display:flex;gap:8px}
+      .header .btn{flex:1}
+      .btn{padding:12px}
+      .input,select{padding:12px}
+      .prod-controls .input{min-width:unset}
+      .truck{padding:14px}
+      .slot{min-width:120px}
+      .slot .remove{right:8px; top:8px; width:32px; height:32px}
+      .slotlines{padding-top:38px}
+      .picker-body{min-width:0; width:min(92vw, 560px)}
+      .product .row1{padding:14px 0}
+      .product .body .input{padding:12px}
+      .product .name{font-size:15px}
+      .muted{font-size:13px}
+    }
   </style>
 </head>
 <body>
@@ -80,7 +102,7 @@
     <div class="header">
       <div style="display:flex;gap:12px;align-items:center">
         <div class="logo">☁️</div>
-        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4)</h1><div class="sub">Sem arrastar. Clique no slot para inserir. Busca sem acentos. Slot com nome, peso e lucro em linhas. Lista de produtos com edição, filtros e ordenação.</div></div>
+        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4b)</h1><div class="sub">Versão otimizada para celular. X fixo no canto superior direito do slot. Sem arrastar.</div></div>
       </div>
       <div><button class="btn" id="btnNewVehicle">+ Novo veículo</button> <button class="btn secondary" id="btnNewProduct">+ Novo produto</button></div>
     </div>
@@ -187,7 +209,7 @@
     </div>
   </div></dialog>
 
-  <!-- App base + AutoSync + Picker (sem arrastar) -->
+  <!-- App base + AutoSync + Picker (sem arrastar) + FIX foco/edição + Mobile tweaks -->
   <script>
     const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>Array.from(e.querySelectorAll(s));
     const brl=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(v)?v:0);
@@ -213,18 +235,16 @@
     const inpTaxPercent=$('#inpTaxPercent'), inpFreight=$('#inpFreight'); const statProfit=$('#statProfit'), statWeight=$('#statWeight'), statFreight=$('#statFreight'), statFinal=$('#statFinal');
     const productRows={};
 
-    // Controles de ordenação/filtro
     const sortByEl = $('#prodSortBy');
     const sortDirEl = $('#prodSortDir');
     const filterPosEl = $('#filterPos');
     const filterNegEl = $('#filterNeg');
 
-    // Picker state
     let pickerSlotIndex = null;
 
     function initControls(){
       if(inpTaxPercent){ inpTaxPercent.value=state.taxPercent; } if(inpFreight){ inpFreight.value=state.freight; }
-      if(inpTaxPercent){ inpTaxPercent.addEventListener('input',()=>{ state.taxPercent=toNum(inpTaxPercent.value); persist(); renderTotals(); renderTruck(); renderProducts(); }); }
+      if(inpTaxPercent){ inpTaxPercent.addEventListener('input',()=>{ state.taxPercent=toNum(inpTaxPercent.value); persist(); renderTotals(); renderTruck(); updateAllProductRows(); }); }
       if(inpFreight){ inpFreight.addEventListener('input',()=>{ state.freight=toNum(inpFreight.value); persist(); renderTotals(); }); }
       $('#btnClearLoad') && $('#btnClearLoad').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; ensureLayout(v); state.layouts[v.id]=Array(v.capacity).fill(null); persist(); renderTruck(); renderTotals(); });
       $('#btnDeleteVehicle') && $('#btnDeleteVehicle').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; state.vehicles=state.vehicles.filter(x=>x.id!==v.id); delete state.layouts[v.id]; state.selectedVehicleId=(state.vehicles[0]&&state.vehicles[0].id)||null; persist(); renderVehicles(); renderTruck(); renderTotals(); });
@@ -233,12 +253,9 @@
       $('#vehAdd')&&$('#vehAdd').addEventListener('click',()=>{ const name=$('#vehName').value.trim()||undefined; const cap=Math.max(1,Math.floor(toNum($('#vehCap').value)||1)); const limit=Math.max(0,Math.floor(toNum($('#vehLimit').value)||0)); const grid=bestGrid(cap); const veh={id:uid('veh'),name:name||`Veículo (${cap} pallets)`,capacity:cap,rows:grid.rows,cols:grid.cols,createdAt:Date.now(),maxWeightKg:limit}; state.vehicles.push(veh); state.selectedVehicleId=veh.id; ensureLayout(veh); $('#vehName').value=''; $('#vehCap').value='2'; $('#vehLimit').value='0'; persist(); renderVehicles(); renderTruck(); renderTotals(); $('#dlgVehicle').close(); });
       $('#prodAdd')&&$('#prodAdd').addEventListener('click',()=>{ const prod={ id:uid('prod'), name:$('#prodName').value.trim()||'Produto novo', buyPrice:toNum($('#prodBuy').value), salePrice:toNum($('#prodSale').value), unitsPerPallet:Math.max(1,Math.floor(toNum($('#prodUnits').value)||1)), unitWeightKg:toNum($('#prodWeight').value), colorIdx:Math.floor(Math.random()*6), mlPercent:toNum($('#prodMlPct').value)||14 }; state.products.push(prod); $('#prodName').value=''; $('#prodBuy').value=''; $('#prodSale').value=''; $('#prodUnits').value=''; $('#prodWeight').value=''; $('#prodMlPct').value=''; persist(); renderProducts(); renderTotals(); renderTruck(); $('#dlgProduct').close(); });
 
-      // Picker close buttons
       $$('#dlgPicker [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgPicker').close()));
-      // Search (sem acentos)
       $('#pickerSearch')&&$('#pickerSearch').addEventListener('input',()=>renderPickerList());
 
-      // Ordenação/Filtros na lista de produtos
       if(sortByEl) sortByEl.addEventListener('change', ()=> renderProducts());
       if(sortDirEl) sortDirEl.addEventListener('change', ()=> renderProducts());
       if(filterPosEl) filterPosEl.addEventListener('change', ()=> renderProducts());
@@ -253,7 +270,6 @@
     function syncVehLimitInput(){ const v=getSelectedVehicle(); if(!v){ vehMaxWeight.value=0; return } vehMaxWeight.value=v.maxWeightKg||0; vehMaxWeight.oninput=()=>{ v.maxWeightKg=Math.max(0,Math.floor(toNum(vehMaxWeight.value)||0)); persist(); renderTotals(); } }
     function showMsg(txt,type='error'){ truckMsg.textContent=txt; truckMsg.className='msg show '+(type==='error'?'error':'ok'); clearTimeout(showMsg._t); showMsg._t=setTimeout(()=>{truckMsg.className='msg'},2400) }
 
-    // Normalização (sem acentos)
     const deaccent = (s)=> (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
     function openPicker(slotIndex){ pickerSlotIndex=slotIndex; const s=$('#pickerSearch'); if(s) s.value=''; renderPickerList(); $('#dlgPicker').showModal(); }
@@ -266,7 +282,7 @@
         <span class="pp ${calc.profitPallet>0?'good':(calc.profitPallet<0?'bad':'')}">💰 ${brl(calc.profitPallet)}</span>
       </div>`; item.addEventListener('click',()=>{ if(pickerSlotIndex==null)return; const layout=state.layouts[v.id]; const {totalWeight}=vehicleTotals(v); const next=totalWeight+calc.palletWeightKg; if(v.maxWeightKg>0 && next>v.maxWeightKg){ showMsg('Não é possível adicionar: limite de peso do veículo seria excedido.','error'); return } layout[pickerSlotIndex]=p.id; persist(); renderTruck(); renderTotals(); $('#dlgPicker').close(); }); list.appendChild(item); count++; }); $('#pickerCount').textContent=`${count} produto(s)`; if(count===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto encontrado.'; list.appendChild(empty) } }
 
-    function renderTruck(){ const v=getSelectedVehicle(); if(!v){ truckWrap.innerHTML='<div class="badge">Nenhum veículo cadastrado.</div>'; return } ensureLayout(v); const layout=state.layouts[v.id]; const gridStyle=`display:grid;gap:8px;grid-template-columns:repeat(${v.cols},minmax(0,1fr));`; let slots=''; for(let i=0;i<layout.length;i++){ const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner='<div class="badge" style="color:#94a3b8">Clique para adicionar</div>'; if(filled){ const calc=computeProduct(prod,state.taxPercent); const pcls=calc.profitPallet>0?'good':(calc.profitPallet<0?'bad':''); inner=`
+    function renderTruck(){ const v=getSelectedVehicle(); if(!v){ truckWrap.innerHTML='<div class="badge">Nenhum veículo cadastrado.</div>'; return } ensureLayout(v); const layout=state.layouts[v.id]; let slots=''; for(let i=0;i<layout.length;i++){ const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner='<div class="badge" style="color:#94a3b8">Clique para adicionar</div>'; if(filled){ const calc=computeProduct(prod,state.taxPercent); const pcls=calc.profitPallet>0?'good':(calc.profitPallet<0?'bad':''); inner=`
           <button class="remove" title="Remover pallet" aria-label="Remover pallet" data-remove="${i}"><span class="x">×</span></button>
           <div class="slotlines">
             <div class="name">${prod.name}</div>
@@ -274,44 +290,20 @@
             <div class="profit ${pcls}">💰 ${brl(calc.profitPallet)}</div>
           </div>` }
         slots+=`<div class="slot ${filled?'filled':''}" data-slot="${i}"><div style="position:relative;z-index:2;text-align:center">${inner}</div></div>` }
-      truckWrap.innerHTML=`<div class="truck"><div class="cab"></div><div class="wheels"><div class="wheel"></div><div class="wheel"></div></div><div class="badge" style="color:#cbd5e1;margin-bottom:6px">Capacidade: ${v.capacity} pallets • Grade: ${v.rows}×${v.cols}${v.maxWeightKg>0?` • Limite: ${kgFmt(v.maxWeightKg)}`:''}</div><div style="${gridStyle}">${slots}</div></div>`;
-      // Clique em slot vazio → abrir picker (sem drag & drop)
+      truckWrap.innerHTML=`<div class="truck">
+        <div class="cab"></div>
+        <div class="wheels"><div class="wheel"></div><div class="wheel"></div></div>
+        <div class="badge" style="color:#cbd5e1;margin-bottom:6px">Capacidade: ${v.capacity} pallets • Grade: ${v.rows}×${v.cols}${v.maxWeightKg>0?` • Limite: ${kgFmt(v.maxWeightKg)}`:''}</div>
+        <div class="slots" style="display:grid;gap:8px;grid-template-columns:repeat(${v.cols}, minmax(110px, 1fr));">${slots}</div>
+      </div>`;
       $$('.slot',truckWrap).forEach(el=>{ if(!el.classList.contains('filled')){ el.addEventListener('click',()=>{ const idx=Number(el.dataset.slot); openPicker(idx) }); }});
-      // Remover
       $$('button[data-remove]',truckWrap).forEach(btn=>btn.addEventListener('click',()=>{ const idx=Number(btn.getAttribute('data-remove')); layout[idx]=null; persist(); renderTruck(); renderTotals(); }))
     }
 
-    function renderProducts(){ productsEl.innerHTML=''; for(const k in productRows) delete productRows[k]; if(!Array.isArray(state.products)) state.products=[];
-      // Preparar vetor com cálculos para ordenar/filtrar
-      const items = state.products.map(p=>{ const c=computeProduct(p,state.taxPercent); return {p, c}; });
-      // Filtro lucro
-      const wantPos = !!(filterPosEl && filterPosEl.checked);
-      const wantNeg = !!(filterNegEl && filterNegEl.checked);
-      const filtered = items.filter(({c})=>{
-        if(!wantPos && !wantNeg) return true; // sem filtro
-        if(wantPos && !wantNeg) return c.profitPallet>=0;
-        if(!wantPos && wantNeg) return c.profitPallet<0;
-        return true; // ambos marcados => tudo
-      });
-      // Ordenação
-      const key = sortByEl? sortByEl.value : 'name';
-      const dir = (sortDirEl? sortDirEl.value : 'asc') === 'asc' ? 1 : -1;
-      filtered.sort((a,b)=>{
-        const A=a, B=b;
-        let va, vb;
-        switch(key){
-          case 'profitUnit': va=A.c.profitUnit; vb=B.c.profitUnit; break;
-          case 'profitPallet': va=A.c.profitPallet; vb=B.c.profitPallet; break;
-          case 'weightPallet': va=A.c.palletWeightKg; vb=B.c.palletWeightKg; break;
-          case 'sale': va=A.c.sale; vb=B.c.sale; break;
-          default: va=(A.p.name||'').toLowerCase(); vb=(B.p.name||'').toLowerCase();
-        }
-        if(va<vb) return -1*dir; if(va>vb) return 1*dir; return 0;
-      });
+    function updateProductRowUI(p, row){ if(!row) return; const c=computeProduct(p,state.taxPercent); const muted=row.querySelector('.muted'); if(muted){ muted.innerHTML=`Lucro un.: <strong>${brl(c.profitUnit)}</strong> • Pallet: <strong>${brl(c.profitPallet)}</strong>` } }
+    function updateAllProductRows(){ Object.entries(productRows).forEach(([id,row])=>{ const p=state.products.find(x=>x.id===id); if(p) updateProductRowUI(p,row) }) }
 
-      // Render
-      filtered.forEach(({p,c})=>{
-        const row=document.createElement('div'); row.className='product'+(state.expanded[p.id]?' open':''); row.dataset.id=p.id; row.innerHTML=`
+    function renderProducts(){ productsEl.innerHTML=''; for(const k in productRows) delete productRows[k]; if(!Array.isArray(state.products)) state.products=[]; const items=state.products.map(p=>{ const c=computeProduct(p,state.taxPercent); return {p,c}; }); const wantPos=!!(filterPosEl&&filterPosEl.checked); const wantNeg=!!(filterNegEl&&filterNegEl.checked); const filtered=items.filter(({c})=>{ if(!wantPos && !wantNeg) return true; if(wantPos && !wantNeg) return c.profitPallet>=0; if(!wantPos && wantNeg) return c.profitPallet<0; return true; }); const key=sortByEl?sortByEl.value:'name'; const dir=(sortDirEl?sortDirEl.value:'asc')==='asc'?1:-1; filtered.sort((a,b)=>{ let va,vb; switch(key){ case 'profitUnit': va=a.c.profitUnit; vb=b.c.profitUnit; break; case 'profitPallet': va=a.c.profitPallet; vb=b.c.profitPallet; break; case 'weightPallet': va=a.c.palletWeightKg; vb=b.c.palletWeightKg; break; case 'sale': va=a.c.sale; vb=b.c.sale; break; default: va=(a.p.name||'').toLowerCase(); vb=(b.p.name||'').toLowerCase(); } if(va<vb) return -1*dir; if(va>vb) return 1*dir; return 0; }); filtered.forEach(({p,c})=>{ const row=document.createElement('div'); row.className='product'+(state.expanded[p.id]?' open':''); row.dataset.id=p.id; row.innerHTML=`
           <div class="row1" data-toggle>
             <div class="swatch"></div>
             <div style="flex:1;min-width:0">
@@ -329,19 +321,7 @@
               <label><div class="sub">Taxa % ML (este produto)</div><input class="input" type="number" step="0.1" min="0" data-edit="mlpct" value="${p.mlPercent||14}"></label>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn danger" title="Excluir">🗑 Excluir produto</button></div>
-          </div>`;
-        productRows[p.id]=row;
-        row.querySelector('[data-toggle]').addEventListener('click',()=>{ state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') });
-        const delBtn=row.querySelector('button[title="Excluir"]'); if(delBtn) delBtn.addEventListener('click',()=>{ state.products=state.products.filter(x=>x.id!==p.id); Object.keys(state.layouts).forEach(vid=>{ state.layouts[vid]=(state.layouts[vid]||[]).map(x=>x===p.id?null:x) }); persist(); renderProducts(); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ p.buyPrice=toNum(e.target.value); persist(); renderTotals(); renderTruck(); renderProducts(); });
-        row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ p.salePrice=toNum(e.target.value); persist(); renderTotals(); renderTruck(); renderProducts(); });
-        row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); renderTotals(); renderTruck(); renderProducts(); });
-        row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ p.unitWeightKg=toNum(e.target.value); persist(); renderTotals(); renderTruck(); renderProducts(); });
-        row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ p.mlPercent=toNum(e.target.value); persist(); renderTotals(); renderTruck(); renderProducts(); });
-        productsEl.appendChild(row);
-      });
-      if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) }
-    }
+          </div>`; productRows[p.id]=row; row.querySelector('[data-toggle]').addEventListener('click',(e)=>{ if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') }); const delBtn=row.querySelector('button[title="Excluir"]'); if(delBtn) delBtn.addEventListener('click',()=>{ state.products=state.products.filter(x=>x.id!==p.id); Object.keys(state.layouts).forEach(vid=>{ state.layouts[vid]=(state.layouts[vid]||[]).map(x=>x===p.id?null:x) }); persist(); renderProducts(); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ p.buyPrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ p.salePrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ p.unitWeightKg=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ p.mlPercent=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); productsEl.appendChild(row); }); if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) } }
 
     function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`${kgFmt(0)} • ${tonFmt(0)}`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); return } const {totalProfit,totalWeight}=vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${kgFmt(totalWeight)} de ${kgFmt(limit)} • ${tonFmt(totalWeight/1000)}`:`${kgFmt(totalWeight)} • ${tonFmt(totalWeight/1000)}`; statWeight.style.color=exceeded?'#dc2626':''; statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.style.color=final>=0?'#22c55e':'#ef4444'; if(exceeded){ showMsg('Peso total excede o limite deste veículo. Considere remover pallets ou aumentar o limite.','error') } }
 
