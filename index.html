@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4e AutoSync (Mobile + Custo + Resumo + Margens)</title>
-  <meta name="description" content="Mobile otimizado. Sem arrastar; picker com busca sem acentos; slot com nome/peso/lucro. Botão X fixo. Lista com edição, filtros e ordenação. Soma total inclui custo. Em cada produto: lucro un., lucro por pallet, imposto, taxas ML e margens. Margem total da carga.">
+  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4g AutoSync (Padrões + Resultado colorido)</title>
+  <meta name="description" content="Mobile otimizado. Sem arrastar; picker com busca sem acentos; slot com nome/peso/lucro. Botão X fixo. Lista com edição, filtros e ordenação. Custo total, margens, resultado colorido. Padrões (cores/texturas) por produto na lista e no caminhão. Proteção de foco ao editar.">
   <style>
     :root{ --bg:#f6f7f9; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --primary:#0f172a; --primary-ink:#ffffff; --accent:#10b981; --danger:#ef4444; --danger-ink:#fff; --chip:#111827cc; }
     *{box-sizing:border-box} html,body{height:100%}
@@ -23,26 +23,27 @@
 
     /* Caminhão / Slots */
     .truck{position:relative;background:#0b1020;border-radius:24px;color:#fff;padding:16px;border:1px solid #0b1020;box-shadow:0 6px 24px rgba(2,6,23,.35);overflow-x:auto}
-    .truck .cab{position:absolute;left:50%;transform:translateX(-50%);top:-18px;width:160px;height:36px;background:#1f2937;border:1px solid #374151;border-bottom:none;border-top-left-radius:16px;border-top-right-radius:16px}
-    .truck .wheels{position:absolute;left:16px;right:16px;top:8px;display:flex;justify-content:space-between}
-    .truck .wheel{width:24px;height:24px;border-radius:50%;background:#374151}
-    .slot{position:relative;aspect-ratio:1/1;border:2px dashed #4b5563;border-radius:12px;background:#111827;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;min-width:110px}
+    .slot{position:relative;aspect-ratio:1/1;border:2px dashed #4b5563;border-radius:12px;background:#0f172a;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;min-width:110px}
     .slot.filled{border-style:solid;border-color:#6ee7b7;cursor:default}
+    .slot .pat{position:absolute;inset:0;opacity:.35;z-index:1;}
 
     /* Conteúdo em linhas dentro do slot */
     .slotlines{position:relative;z-index:2;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;text-align:center;max-width:95%;padding-top:30px}
     .slotlines .name{background:rgba(255,255,255,.92);color:#111827;padding:3px 8px;border-radius:8px;font-size:12px;font-weight:700}
     .slotlines .weight{color:#e5e7eb;font-size:13px}
     .slotlines .profit{font-weight:800}
-    .profit.good{color:#22c55e} .profit.bad{color:#ef4444}
 
-    /* Botão X (sempre top-right do slot) */
+    /* Cores de lucro/resultado */
+    .profit{font-weight:800}
+    .profit.good{color:#16a34a} /* verde */
+    .profit.bad{color:#dc2626}  /* vermelho */
+
+    /* Botão X */
     .slot .remove{position:absolute;right:6px;top:6px;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;background:var(--danger);color:var(--danger-ink);border:none;cursor:pointer;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,.25)}
     .slot .remove:hover{filter:brightness(1.05)}
     .slot .remove:focus{outline:2px solid #fff;outline-offset:2px}
     .slot .remove .x{font-weight:900;font-size:16px;line-height:1}
 
-    /* Modal base */
     dialog{border:none;border-radius:16px;box-shadow:0 24px 48px rgba(2,6,23,.35)} dialog::backdrop{background:rgba(0,0,0,.45)}
     .modal .content{padding:16px 18px}
 
@@ -61,12 +62,12 @@
     .pp{font-weight:800}
     .pp.good{color:#22c55e} .pp.bad{color:#ef4444}
 
-    /* Produtos (lista à direita) */
+    /* Produtos */
     .prod-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
     .prod-controls{display:flex;flex-wrap:wrap;gap:8px}
     .product{border-bottom:1px solid var(--line);} 
     .product .row1{display:flex;gap:12px;align-items:center;padding:12px 0;cursor:pointer}
-    .product .swatch{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:#eef2ff}
+    .product .swatch{width:28px;height:28px;border-radius:8px;border:2px solid #e5e7eb;background:#eef2ff;box-shadow:inset 0 0 0 2px #ffffff}
     .product .name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .muted{color:var(--muted);font-size:12px}
     .product .body{padding:8px 0 12px;display:none} 
@@ -74,15 +75,11 @@
     .chev{font-size:12px;color:#6b7280;transition:transform .2s ease} 
     .product.open .chev{transform:rotate(90deg)}
 
-    /* Resumo financeiro por produto */
-    .finbox{margin-top:8px;border:1px dashed var(--line);border-radius:12px;padding:10px}
-    .finbox .title{font-weight:700;font-size:12px;color:#111827;margin-bottom:6px}
-    .fin{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:6px}
-    .fin li{font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px}
-    .fin li .v{font-weight:800}
-    .fin .hint{color:#64748b;font-size:11px}
+    /* Cards de totais */
+    .stats .val{font-weight:700}
+    #statFinal.profit{font-weight:800}
 
-    /* Mobile tweaks */
+    /* Mobile */
     @media (max-width: 768px){
       .container{padding:12px}
       h1{font-size:18px}
@@ -102,7 +99,6 @@
       .product .body .input{padding:12px}
       .product .name{font-size:15px}
       .muted{font-size:13px}
-      .fin{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -111,20 +107,10 @@
     <div class="header">
       <div style="display:flex;gap:12px;align-items:center">
         <div class="logo">☁️</div>
-        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4e)</h1><div class="sub">Mobile otimizado • X no canto do slot • Sem arrastar • Soma com <b>custo total</b> • Resumo por produto (lucro/imposto/ML) • <b>Margens</b> por produto e da carga.</div></div>
+        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4g)</h1><div class="sub">Padrões por produto (cores/texturas) • Lucros e <b>Resultado</b> com cor e negrito • Proteção de foco ao editar.</div></div>
       </div>
       <div><button class="btn" id="btnNewVehicle">+ Novo veículo</button> <button class="btn secondary" id="btnNewProduct">+ Novo produto</button></div>
     </div>
-
-    <div class="card"><div class="content">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="background:#f4f4f5;border-radius:12px;padding:6px 8px;color:#3f3f46;font-size:12px">🔗</div><div><div style="font-weight:700">Conexão & Espaço</div><div class="sub">Informe uma vez; nas próximas visitas conectamos automaticamente.</div></div></div>
-      <div class="grid cols-4">
-        <label><div class="sub">Espaço</div><input class="input" id="wsId" placeholder="ex.: time-vendas"></label>
-        <label><div class="sub">Config Firebase (JSON)</div><input class="input" id="fbConfig" placeholder='{"apiKey":"...","projectId":"...","appId":"..."}'></label>
-        <div style="display:flex;gap:8px;align-items:flex-end"><button class="btn" id="btnConnect">Conectar</button><button class="btn secondary" id="btnDisconnect">Desconectar</button></div>
-        <div><div class="sub">Status</div><div id="syncStatus" class="badge">Desconectado</div></div>
-      </div>
-    </div></div>
 
     <div class="grid" style="grid-template-columns:2fr 1fr;gap:16px;margin-top:16px">
       <div>
@@ -138,13 +124,12 @@
             <button class="btn danger" id="btnDeleteVehicle">🗑 Excluir veículo</button>
           </div>
           <div id="truckWrap"></div>
-          <div id="truckMsg" class="msg"></div>
           <div class="stats" style="margin-top:12px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
             <div class="stat"><div class="lbl">Lucro total</div><div class="val" id="statProfit">R$ 0,00</div></div>
             <div class="stat"><div class="lbl">Peso total</div><div class="val" id="statWeight">0 kg • 0 t</div></div>
             <div class="stat"><div class="lbl">Custo total</div><div class="val" id="statCost">R$ 0,00</div></div>
             <div class="stat"><div class="lbl">Frete</div><div class="val" id="statFreight">R$ 0,00</div></div>
-            <div class="stat"><div class="lbl">Resultado</div><div class="val" id="statFinal">R$ 0,00</div></div>
+            <div class="stat"><div class="lbl">Resultado</div><div class="val profit" id="statFinal">R$ 0,00</div></div>
             <div class="stat"><div class="lbl">Margem total</div><div class="val" id="statMargin">0%</div></div>
           </div>
         </div></div>
@@ -155,7 +140,7 @@
             <div style="background:#f4f4f5;border-radius:12px;padding:6px 8px;color:#3f3f46;font-size:12px">📦</div>
             <div>
               <div style="font-weight:700">Produtos</div>
-              <div class="sub">Lista (clique para editar). Sem arrastar.</div>
+              <div class="sub">Lista (clique para editar). Sem arrastar. Cada item tem um padrão aplicado (cor/texture).</div>
             </div>
           </div>
           <div class="prod-controls">
@@ -220,7 +205,7 @@
     </div>
   </div></dialog>
 
-  <!-- App base + AutoSync + Picker (sem arrastar) + Mobile tweaks + Custo total + Resumo por produto + Margens -->
+  <!-- App base + Padrões + Resultado colorido + Proteção de foco -->
   <script>
     const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>Array.from(e.querySelectorAll(s));
     const brl=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(v)?v:0);
@@ -229,6 +214,17 @@
     const pctFmt=v=>`${(Number.isFinite(v)?v:0).toLocaleString('pt-BR',{maximumFractionDigits:2})}%`;
     function uid(p='id'){return p+'_'+Math.random().toString(36).slice(2,9)}
     function bestGrid(cap){ if(cap<=0)return{rows:1,cols:1}; let best={rows:1,cols:cap},bd=cap-1; for(let r=1;r<=Math.sqrt(cap);r++){ if(cap%r===0){ const c=Math.ceil(cap/r),d=Math.abs(c-r); if(d<bd){best={rows:r,cols:c};bd=d} } } if(best.rows*best.cols!==cap){ const rows=Math.floor(Math.sqrt(cap)), cols=Math.ceil(cap/rows); best={rows,cols} } return best }
+
+    // --- Padrões (cores/texturas) por produto ---
+    const BASE_COLORS=['#2563eb','#059669','#f59e0b','#ef4444','#7c3aed','#0ea5e9','#10b981','#f97316','#dc2626','#a855f7'];
+    function colorFor(p){ return BASE_COLORS[Math.abs(p.colorIdx||0)%BASE_COLORS.length] }
+    function patternFor(idx, col){ const k=idx%4; const c=col; switch(k){
+      case 0: return { bgColor: c+'10', bgImage: `repeating-linear-gradient(45deg, ${c}22 0 8px, ${c}44 8px 16px)` };
+      case 1: return { bgColor: c+'10', bgImage: `repeating-linear-gradient(-45deg, ${c}22 0 8px, ${c}44 8px 16px)` };
+      case 2: return { bgColor: c+'0d', bgImage: `repeating-linear-gradient(0deg, ${c}22 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, ${c}22 0 6px, transparent 6px 12px)` };
+      default: return { bgColor: c+'10', bgImage: `radial-gradient(${c}33 1.5px, transparent 1.5px)`, bgSize:'8px 8px', bgPos:'0 0' };
+    }}
+
     function fixedML(sale){ const s=toNum(sale); if(s>198.99)return 0; if(s>99.99)return 6; if(s>49.99)return 4; if(s>29.99)return 2; if(s>7.99)return 1; return 0 }
     function computeProduct(p,taxPercent){
       const mlPercent=clamp(toNum(p.mlPercent));
@@ -257,33 +253,25 @@
       state.vehicles=[{id:uid('veh'),name:'Ranger',capacity:v1c,rows:g1.rows,cols:g1.cols,createdAt:Date.now(),maxWeightKg:0},{id:uid('veh'),name:'Caminhão 6 pallets',capacity:v2c,rows:g2.rows,cols:g2.cols,createdAt:Date.now(),maxWeightKg:0}];
     }
 
-    function persist(){ store.set('mcalc_tax_percent',state.taxPercent); store.set('mcalc_freight',state.freight); store.set('mcalc_products',state.products); store.set('mcalc_vehicles',state.vehicles); store.set('mcalc_layouts',state.layouts); store.set('mcalc_selected_vehicle',state.selectedVehicleId); store.set('mcalc_expanded',state.expanded); cloudScheduleSave && cloudScheduleSave(); }
+    function persist(){ store.set('mcalc_tax_percent',state.taxPercent); store.set('mcalc_freight',state.freight); store.set('mcalc_products',state.products); store.set('mcalc_vehicles',state.vehicles); store.set('mcalc_layouts',state.layouts); store.set('mcalc_selected_vehicle',state.selectedVehicleId); store.set('mcalc_expanded',state.expanded); if(window.cloudScheduleSave) cloudScheduleSave(); }
 
-    const selVehicle=$('#selVehicle'), vehMaxWeight=$('#vehMaxWeight'), truckWrap=$('#truckWrap'), truckMsg=$('#truckMsg'), productsEl=$('#products');
-    const inpTaxPercent=$('#inpTaxPercent'), inpFreight=$('#inpFreight'); const statProfit=$('#statProfit'), statWeight=$('#statWeight'), statFreight=$('#statFreight'), statFinal=$('#statFinal'), statCost=$('#statCost'), statMargin=$('#statMargin');
+    const selVehicle=$('#selVehicle'), vehMaxWeight=$('#vehMaxWeight'), truckWrap=$('#truckWrap'), productsEl=$('#products');
+    const statProfit=$('#statProfit'), statWeight=$('#statWeight'), statFreight=$('#statFreight'), statFinal=$('#statFinal'), statCost=$('#statCost'), statMargin=$('#statMargin');
+    const sortByEl = $('#prodSortBy'); const sortDirEl = $('#prodSortDir'); const filterPosEl = $('#filterPos'); const filterNegEl = $('#filterNeg');
     const productRows={};
 
-    const sortByEl = $('#prodSortBy');
-    const sortDirEl = $('#prodSortDir');
-    const filterPosEl = $('#filterPos');
-    const filterNegEl = $('#filterNeg');
-
-    let pickerSlotIndex = null;
+    let pickerSlotIndex = null; let userEditingUntil = 0; function markEditing(){ userEditingUntil = Date.now() + 1200; }
 
     function initControls(){
-      if(inpTaxPercent){ inpTaxPercent.value=state.taxPercent; } if(inpFreight){ inpFreight.value=state.freight; }
-      if(inpTaxPercent){ inpTaxPercent.addEventListener('input',()=>{ state.taxPercent=toNum(inpTaxPercent.value); persist(); renderTotals(); renderTruck(); updateAllProductRows(); }); }
-      if(inpFreight){ inpFreight.addEventListener('input',()=>{ state.freight=toNum(inpFreight.value); persist(); renderTotals(); }); }
       $('#btnClearLoad') && $('#btnClearLoad').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; ensureLayout(v); state.layouts[v.id]=Array(v.capacity).fill(null); persist(); renderTruck(); renderTotals(); });
       $('#btnDeleteVehicle') && $('#btnDeleteVehicle').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; state.vehicles=state.vehicles.filter(x=>x.id!==v.id); delete state.layouts[v.id]; state.selectedVehicleId=(state.vehicles[0]&&state.vehicles[0].id)||null; persist(); renderVehicles(); renderTruck(); renderTotals(); });
       const openVeh=()=>$('#dlgVehicle').showModal(); $('#btnNewVehicle')&&$('#btnNewVehicle').addEventListener('click',openVeh); $('#btnQuickNewVehicle')&&$('#btnQuickNewVehicle').addEventListener('click',openVeh); $('#btnNewProduct')&&$('#btnNewProduct').addEventListener('click',()=>$('#dlgProduct').showModal()); $('#btnNewProduct2')&&$('#btnNewProduct2').addEventListener('click',()=>$('#dlgProduct').showModal());
       $$('#dlgVehicle [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgVehicle').close())); $$('#dlgProduct [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgProduct').close()));
       $('#vehAdd')&&$('#vehAdd').addEventListener('click',()=>{ const name=$('#vehName').value.trim()||undefined; const cap=Math.max(1,Math.floor(toNum($('#vehCap').value)||1)); const limit=Math.max(0,Math.floor(toNum($('#vehLimit').value)||0)); const grid=bestGrid(cap); const veh={id:uid('veh'),name:name||`Veículo (${cap} pallets)`,capacity:cap,rows:grid.rows,cols:grid.cols,createdAt:Date.now(),maxWeightKg:limit}; state.vehicles.push(veh); state.selectedVehicleId=veh.id; ensureLayout(veh); $('#vehName').value=''; $('#vehCap').value='2'; $('#vehLimit').value='0'; persist(); renderVehicles(); renderTruck(); renderTotals(); $('#dlgVehicle').close(); });
-      $('#prodAdd')&&$('#prodAdd').addEventListener('click',()=>{ const prod={ id:uid('prod'), name:$('#prodName').value.trim()||'Produto novo', buyPrice:toNum($('#prodBuy').value), salePrice:toNum($('#prodSale').value), unitsPerPallet:Math.max(1,Math.floor(toNum($('#prodUnits').value)||1)), unitWeightKg:toNum($('#prodWeight').value), colorIdx:Math.floor(Math.random()*6), mlPercent:toNum($('#prodMlPct').value)||14 }; state.products.push(prod); $('#prodName').value=''; $('#prodBuy').value=''; $('#prodSale').value=''; $('#prodUnits').value=''; $('#prodWeight').value=''; $('#prodMlPct').value=''; persist(); renderProducts(); renderTotals(); renderTruck(); $('#dlgProduct').close(); });
+      $('#prodAdd')&&$('#prodAdd').addEventListener('click',()=>{ const prod={ id:uid('prod'), name:$('#prodName').value.trim()||'Produto novo', buyPrice:toNum($('#prodBuy').value), salePrice:toNum($('#prodSale').value), unitsPerPallet:Math.max(1,Math.floor(toNum($('#prodUnits').value)||1)), unitWeightKg:toNum($('#prodWeight').value), colorIdx:Math.floor(Math.random()*BASE_COLORS.length), mlPercent:toNum($('#prodMlPct').value)||14 }; state.products.push(prod); $('#prodName').value=''; $('#prodBuy').value=''; $('#prodSale').value=''; $('#prodUnits').value=''; $('#prodWeight').value=''; $('#prodMlPct').value=''; persist(); renderProducts(); renderTotals(); renderTruck(); $('#dlgProduct').close(); });
 
       $$('#dlgPicker [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgPicker').close()));
       $('#pickerSearch')&&$('#pickerSearch').addEventListener('input',()=>renderPickerList());
-
       if(sortByEl) sortByEl.addEventListener('change', ()=> renderProducts());
       if(sortDirEl) sortDirEl.addEventListener('change', ()=> renderProducts());
       if(filterPosEl) filterPosEl.addEventListener('change', ()=> renderProducts());
@@ -293,61 +281,46 @@
     function ensureLayout(v){ if(!state.layouts[v.id] || state.layouts[v.id].length!==v.capacity){ state.layouts[v.id]=Array(v.capacity).fill(null) } }
     function getSelectedVehicle(){ let v=state.vehicles.find(x=>x.id===state.selectedVehicleId) || state.vehicles[0]; if(!v && state.vehicles.length){ v=state.vehicles[0]; state.selectedVehicleId=v.id } return v||null }
 
-    function vehicleTotals(v){ ensureLayout(v); const layout=state.layouts[v.id]; let totalProfit=0,totalWeight=0,totalCost=0,totalRevenue=0; layout.forEach(pid=>{ if(!pid)return; const p=state.products.find(x=>x.id===pid); if(!p)return; const calc=computeProduct(p,state.taxPercent); totalProfit += calc.profitPallet; totalWeight += calc.palletWeightKg; const costPallet = clamp(toNum(p.buyPrice)) * clamp(toNum(p.unitsPerPallet),1); totalCost += costPallet; totalRevenue += calc.revenuePallet; }); return { totalProfit, totalWeight, totalCost, totalRevenue } }
+    function vehicleTotals(v){ ensureLayout(v); const layout=state.layouts[v.id]; let totalProfit=0,totalWeight=0,totalCost=0,totalRevenue=0; layout.forEach(pid=>{ if(!pid)return; const p=state.products.find(x=>x.id===pid); if(!p)return; const c=computeProduct(p,state.taxPercent); totalProfit += c.profitPallet; totalWeight += c.palletWeightKg; totalCost += clamp(toNum(p.buyPrice))*clamp(toNum(p.unitsPerPallet),1); totalRevenue += c.revenuePallet; }); return { totalProfit, totalWeight, totalCost, totalRevenue } }
 
-    function renderVehicles(){ selVehicle.innerHTML=''; state.vehicles.forEach(v=>{ const o=document.createElement('option'); o.value=v.id; o.textContent=`${v.name} — ${v.capacity} pallets`; selVehicle.appendChild(o) }); if(state.vehicles.length){ const ok=state.vehicles.some(v=>v.id===state.selectedVehicleId); if(!ok) state.selectedVehicleId=state.vehicles[0].id; selVehicle.value=state.selectedVehicleId } selVehicle.onchange=()=>{ state.selectedVehicleId=selVehicle.value; persist(); renderTruck(); renderTotals(); syncVehLimitInput(); }; syncVehLimitInput(); }
-
+    function renderVehicles(){ const sel=selVehicle; sel.innerHTML=''; state.vehicles.forEach(v=>{ const o=document.createElement('option'); o.value=v.id; o.textContent=`${v.name} — ${v.capacity} pallets`; sel.appendChild(o) }); if(state.vehicles.length){ const ok=state.vehicles.some(v=>v.id===state.selectedVehicleId); if(!ok) state.selectedVehicleId=state.vehicles[0].id; sel.value=state.selectedVehicleId } sel.onchange=()=>{ state.selectedVehicleId=sel.value; persist(); renderTruck(); renderTotals(); syncVehLimitInput(); }; syncVehLimitInput(); }
     function syncVehLimitInput(){ const v=getSelectedVehicle(); if(!v){ vehMaxWeight.value=0; return } vehMaxWeight.value=v.maxWeightKg||0; vehMaxWeight.oninput=()=>{ v.maxWeightKg=Math.max(0,Math.floor(toNum(vehMaxWeight.value)||0)); persist(); renderTotals(); } }
-    function showMsg(txt,type='error'){ truckMsg.textContent=txt; truckMsg.className='msg show '+(type==='error'?'error':'ok'); clearTimeout(showMsg._t); showMsg._t=setTimeout(()=>{truckMsg.className='msg'},2400) }
 
-    const deaccent = (s)=> (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-
-    function openPicker(slotIndex){ pickerSlotIndex=slotIndex; const s=$('#pickerSearch'); if(s) s.value=''; renderPickerList(); $('#dlgPicker').showModal(); }
-    function renderPickerList(){ const list=$('#pickerList'); if(!list)return; list.innerHTML=''; const v=getSelectedVehicle(); const q=deaccent(($('#pickerSearch')?.value||'')).toLowerCase().trim(); let count=0; state.products.forEach(p=>{ const nameNorm=deaccent(p.name).toLowerCase(); if(q && !nameNorm.includes(q)) return; const calc=computeProduct(p,state.taxPercent); const item=document.createElement('div'); item.className='pitem'; item.innerHTML=`<div>
+    function renderPickerList(){ const list=$('#pickerList'); if(!list)return; list.innerHTML=''; const v=getSelectedVehicle(); const deaccent=(s)=> (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=deaccent(($('#pickerSearch')?.value||'')).toLowerCase().trim(); let count=0; state.products.forEach(p=>{ const nameNorm=deaccent(p.name).toLowerCase(); if(q && !nameNorm.includes(q)) return; const c=computeProduct(p,state.taxPercent); const item=document.createElement('div'); item.className='pitem'; item.innerHTML=`<div>
         <div class="pname">${p.name}</div>
         <div class="pmeta">Unid/pallet: ${p.unitsPerPallet} • Peso unit.: ${p.unitWeightKg||0} kg</div>
       </div>
       <div class="pstats">
-        <span class="chip">⚖️ ${kgFmt(calc.palletWeightKg)}</span>
-        <span class="pp ${calc.profitPallet>0?'good':(calc.profitPallet<0?'bad':'')}">💰 ${brl(calc.profitPallet)}</span>
-      </div>`; item.addEventListener('click',()=>{ if(pickerSlotIndex==null)return; const layout=state.layouts[v.id]; const {totalWeight}=vehicleTotals(v); const next=totalWeight+calc.palletWeightKg; if(v.maxWeightKg>0 && next>v.maxWeightKg){ showMsg('Não é possível adicionar: limite de peso do veículo seria excedido.','error'); return } layout[pickerSlotIndex]=p.id; persist(); renderTruck(); renderTotals(); $('#dlgPicker').close(); }); list.appendChild(item); count++; }); $('#pickerCount').textContent=`${count} produto(s)`; if(count===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto encontrado.'; list.appendChild(empty) } }
+        <span class="chip">⚖️ ${kgFmt(c.palletWeightKg)}</span>
+        <span class="pp ${c.profitPallet>0?'good':(c.profitPallet<0?'bad':'')}">💰 ${brl(c.profitPallet)}</span>
+      </div>`; item.addEventListener('click',()=>{ if(pickerSlotIndex==null)return; const layout=state.layouts[v.id]; const totals=vehicleTotals(v); const next=totals.totalWeight+c.palletWeightKg; if(v.maxWeightKg>0 && next>v.maxWeightKg){ alert('Não é possível adicionar: limite de peso do veículo seria excedido.'); return } layout[pickerSlotIndex]=p.id; persist(); renderTruck(); renderTotals(); $('#dlgPicker').close(); }); list.appendChild(item); count++; }); $('#pickerCount').textContent=`${count} produto(s)`; if(count===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto encontrado.'; list.appendChild(empty) } }
 
-    function renderTruck(){ const v=getSelectedVehicle(); if(!v){ truckWrap.innerHTML='<div class="badge">Nenhum veículo cadastrado.</div>'; return } ensureLayout(v); const layout=state.layouts[v.id]; let slots=''; for(let i=0;i<layout.length;i++){ const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner='<div class="badge" style="color:#94a3b8">Clique para adicionar</div>'; if(filled){ const calc=computeProduct(prod,state.taxPercent); const pcls=calc.profitPallet>0?'good':(calc.profitPallet<0?'bad':''); inner=`
+    function renderTruck(){ const v=getSelectedVehicle(); if(!v){ truckWrap.innerHTML='<div class="badge">Nenhum veículo cadastrado.</div>'; return } ensureLayout(v); const layout=state.layouts[v.id]; let slots=''; for(let i=0;i<layout.length;i++){ const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner='<div class="badge" style="color:#94a3b8">Clique para adicionar</div>'; let patHTML=''; if(filled){ const c=computeProduct(prod,state.taxPercent); const pcls=c.profitPallet>0?'good':(c.profitPallet<0?'bad':''); const col=colorFor(prod); const pat=patternFor(prod.colorIdx||0,col); const extra = (pat.bgSize?`background-size:${pat.bgSize};`:'') + (pat.bgPos?`background-position:${pat.bgPos};`:''); patHTML=`<div class="pat" style="background-color:${pat.bgColor}; background-image:${pat.bgImage}; ${extra}"></div>`;
+          inner=`
           <button class="remove" title="Remover pallet" aria-label="Remover pallet" data-remove="${i}"><span class="x">×</span></button>
+          ${patHTML}
           <div class="slotlines">
             <div class="name">${prod.name}</div>
-            <div class="weight">⚖️ ${kgFmt(calc.palletWeightKg)}</div>
-            <div class="profit ${pcls}">💰 ${brl(calc.profitPallet)}</div>
+            <div class="weight">⚖️ ${kgFmt(c.palletWeightKg)}</div>
+            <div class="profit ${pcls}">💰 ${brl(c.profitPallet)}</div>
           </div>` }
         slots+=`<div class="slot ${filled?'filled':''}" data-slot="${i}"><div style="position:relative;z-index:2;text-align:center">${inner}</div></div>` }
-      truckWrap.innerHTML=`<div class="truck">
-        <div class="cab"></div>
-        <div class="wheels"><div class="wheel"></div><div class="wheel"></div></div>
-        <div class="badge" style="color:#cbd5e1;margin-bottom:6px">Capacidade: ${v.capacity} pallets • Grade: ${v.rows}×${v.cols}${v.maxWeightKg>0?` • Limite: ${kgFmt(v.maxWeightKg)}`:''}</div>
-        <div class="slots" style="display:grid;gap:8px;grid-template-columns:repeat(${v.cols}, minmax(110px, 1fr));">${slots}</div>
-      </div>`;
-      $$('.slot',truckWrap).forEach(el=>{ if(!el.classList.contains('filled')){ el.addEventListener('click',()=>{ const idx=Number(el.dataset.slot); openPicker(idx) }); }});
+      truckWrap.innerHTML=`<div class="truck"><div class="slots" style="display:grid;gap:8px;grid-template-columns:repeat(${getSelectedVehicle().cols}, minmax(110px, 1fr));">${slots}</div></div>`;
+      $$('.slot',truckWrap).forEach(el=>{ if(!el.classList.contains('filled')){ el.addEventListener('click',()=>{ const idx=Number(el.dataset.slot); pickerSlotIndex=idx; $('#dlgPicker').showModal(); renderPickerList(); }); }});
       $$('button[data-remove]',truckWrap).forEach(btn=>btn.addEventListener('click',()=>{ const idx=Number(btn.getAttribute('data-remove')); layout[idx]=null; persist(); renderTruck(); renderTotals(); }))
     }
 
-    // Atualiza UI do item sem perder foco
     function updateProductRowUI(p, row){
-      if(!row) return; const c=computeProduct(p,state.taxPercent);
-      const muted=row.querySelector('.muted'); if(muted){ muted.innerHTML=`Lucro un.: <strong>${brl(c.profitUnit)}</strong> • Pallet: <strong>${brl(c.profitPallet)}</strong>` }
-      // Resumo financeiro
-      const map={
-        profitUnit: brl(c.profitUnit),
-        profitPallet: brl(c.profitPallet),
-        tax: brl(c.taxVal),
-        mlpct: brl(c.mlPctVal),
-        mlfixed: brl(c.fixed),
-        mltotal: brl(c.mlPctVal + c.fixed),
-        taxPct: `${(state.taxPercent||0).toLocaleString('pt-BR')}%`,
-        mlPctNum: `${(c.mlPercent||0).toLocaleString('pt-BR')}%`,
-        mUnit: pctFmt(c.marginUnitPct),
-        mPallet: pctFmt(c.marginPalletPct)
-      };
-      Object.entries(map).forEach(([k,val])=>{ const el=row.querySelector(`[data-fin="${k}"]`); if(el) el.textContent=val });
+      if(!row) return; const c=computeProduct(p,state.taxPercent); const col=colorFor(p); const pat=patternFor(p.colorIdx||0, col);
+      // Swatch com padrão
+      const sw=row.querySelector('.swatch'); if(sw){ const extra=(pat.bgSize?`background-size:${pat.bgSize};`:'')+(pat.bgPos?`background-position:${pat.bgPos};`:''); sw.style.backgroundColor=pat.bgColor; sw.style.backgroundImage=pat.bgImage; sw.style.cssText += ';'+extra; sw.style.borderColor=col }
+      // Cabeçalho lucros com cor
+      const hdrUnit=row.querySelector('[data-fin="profitUnit"]'); const hdrPallet=row.querySelector('[data-fin="profitPallet"]');
+      if(hdrUnit){ hdrUnit.textContent=brl(c.profitUnit); hdrUnit.classList.remove('good','bad'); hdrUnit.classList.add('profit', c.profitUnit>0?'good':(c.profitUnit<0?'bad':null)); }
+      if(hdrPallet){ hdrPallet.textContent=brl(c.profitPallet); hdrPallet.classList.remove('good','bad'); hdrPallet.classList.add('profit', c.profitPallet>0?'good':(c.profitPallet<0?'bad':null)); }
+      // Resumo financeiro (já tratado anteriormente)
+      const map={ profitUnit:c.profitUnit, profitPallet:c.profitPallet, tax:c.taxVal, mlpct:c.mlPctVal, mlfixed:c.fixed, mltotal:c.mlPctVal+c.fixed, taxPct:`${(state.taxPercent||0).toLocaleString('pt-BR')}%`, mlPctNum:`${(c.mlPercent||0).toLocaleString('pt-BR')}%`, mUnit:pctFmt(c.marginUnitPct), mPallet:pctFmt(c.marginPalletPct) };
+      Object.entries(map).forEach(([k,val])=>{ row.querySelectorAll(`[data-fin="${k}"]`).forEach(el=>{ if(k==='profitUnit'||k==='profitPallet'){ el.textContent=brl(val); el.classList.remove('good','bad'); el.classList.add('profit', val>0?'good':(val<0?'bad':null)); } else { el.textContent=typeof val==='number'?brl(val):val } }) });
     }
     function updateAllProductRows(){ Object.entries(productRows).forEach(([id,row])=>{ const p=state.products.find(x=>x.id===id); if(p) updateProductRowUI(p,row) }) }
 
@@ -356,7 +329,7 @@
             <div class="swatch"></div>
             <div style="flex:1;min-width:0">
               <div class="name" title="${p.name}">${p.name}</div>
-              <div class="muted">Lucro un.: <strong>${brl(c.profitUnit)}</strong> • Pallet: <strong>${brl(c.profitPallet)}</strong></div>
+              <div class="muted">Lucro un.: <span class="profit" data-fin="profitUnit">${brl(c.profitUnit)}</span> • Pallet: <span class="profit" data-fin="profitPallet">${brl(c.profitPallet)}</span></div>
             </div>
             <span class="chev">▶</span>
           </div>
@@ -371,8 +344,8 @@
             <div class="finbox">
               <div class="title">Resumo financeiro (auto)</div>
               <ul class="fin">
-                <li><span>Lucro unitário</span><span class="v" data-fin="profitUnit">${brl(c.profitUnit)}</span></li>
-                <li><span>Lucro por pallet</span><span class="v" data-fin="profitPallet">${brl(c.profitPallet)}</span></li>
+                <li><span>Lucro unitário</span><span class="v profit" data-fin="profitUnit">${brl(c.profitUnit)}</span></li>
+                <li><span>Lucro por pallet</span><span class="v profit" data-fin="profitPallet">${brl(c.profitPallet)}</span></li>
                 <li><span>Imposto (sobre venda)</span><span><span class="v" data-fin="tax">${brl(c.taxVal)}</span> <span class="hint" data-fin="taxPct">${(state.taxPercent||0).toLocaleString('pt-BR')}%</span></span></li>
                 <li><span>Taxa ML %</span><span><span class="v" data-fin="mlpct">${brl(c.mlPctVal)}</span> <span class="hint" data-fin="mlPctNum">${(c.mlPercent||0).toLocaleString('pt-BR')}%</span></span></li>
                 <li><span>Taxa ML fixa</span><span class="v" data-fin="mlfixed">${brl(c.fixed)}</span></li>
@@ -386,39 +359,43 @@
         productRows[p.id]=row;
         row.querySelector('[data-toggle]').addEventListener('click',(e)=>{ if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') });
         const delBtn=row.querySelector('button[title="Excluir"]'); if(delBtn) delBtn.addEventListener('click',()=>{ state.products=state.products.filter(x=>x.id!==p.id); Object.keys(state.layouts).forEach(vid=>{ state.layouts[vid]=(state.layouts[vid]||[]).map(x=>x===p.id?null:x) }); persist(); renderProducts(); renderTotals(); renderTruck(); });
-        // Handlers de edição (atualizam só o row)
-        row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ p.buyPrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ p.salePrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ p.unitWeightKg=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ p.mlPercent=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        // Handlers de edição (protegem foco)
+        row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ markEditing(); p.buyPrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ markEditing(); p.salePrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ markEditing(); p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ markEditing(); p.unitWeightKg=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ markEditing(); p.mlPercent=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        // Inicializa padrão + cores
+        updateProductRowUI(p,row);
         productsEl.appendChild(row);
       });
       if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) }
     }
 
-    function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`${kgFmt(0)} • ${tonFmt(0)}`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); statCost.textContent=brl(0); statMargin.textContent=pctFmt(0); return } const { totalProfit, totalWeight, totalCost, totalRevenue } = vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${kgFmt(totalWeight)} de ${kgFmt(limit)} • ${tonFmt(totalWeight/1000)}`:`${kgFmt(totalWeight)} • ${tonFmt(totalWeight/1000)}`; statWeight.style.color=exceeded?'#dc2626':''; statCost.textContent=brl(totalCost); statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.style.color=final>=0?'#22c55e':'#ef4444'; const marginTotalPct = totalRevenue>0 ? (totalProfit/totalRevenue)*100 : 0; statMargin.textContent=pctFmt(marginTotalPct); statMargin.style.color=marginTotalPct>=0?'#22c55e':'#ef4444'; if(exceeded){ showMsg('Peso total excede o limite deste veículo. Considere remover pallets ou aumentar o limite.','error') } }
+    function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`${kgFmt(0)} • ${tonFmt(0)}`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); if(statCost) statCost.textContent=brl(0); if(statMargin) statMargin.textContent=pctFmt(0); return } const { totalProfit, totalWeight, totalCost, totalRevenue } = vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${kgFmt(totalWeight)} de ${kgFmt(limit)} • ${tonFmt(totalWeight/1000)}`:`${kgFmt(totalWeight)} • ${tonFmt(totalWeight/1000)}`; statWeight.style.color=exceeded?'#dc2626':''; if(statCost) statCost.textContent=brl(totalCost); statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.classList.remove('good','bad'); statFinal.classList.add('profit', final>=0?'good':'bad'); if(statMargin){ const marginTotalPct = totalRevenue>0 ? (totalProfit/totalRevenue)*100 : 0; statMargin.textContent=pctFmt(marginTotalPct); statMargin.style.color=marginTotalPct>=0?'#22c55e':'#ef4444'; } }
 
     function render(){ renderVehicles(); renderTruck(); renderProducts(); renderTotals(); }
   </script>
 
-  <!-- Firebase SDKs + AutoConnect -->
+  <!-- Firebase SDKs + AutoConnect (proteção de foco contra snapshot enquanto digita) -->
   <script type="module">
     import { initializeApp, deleteApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
     let app=null, db=null, unsub=null, wsRef=null, isApplyingRemote=false, saveT=null, lastRemoteStamp=0;
     const $=(s,e=document)=>e.querySelector(s);
-    const syncStatus=$('#syncStatus'); const wsIdEl=$('#wsId'); const fbConfigEl=$('#fbConfig'); const btnConnect=$('#btnConnect'); const btnDisconnect=$('#btnDisconnect');
-    function setStatus(txt){ syncStatus.textContent=txt }
+    const syncStatus=document.getElementById('syncStatus');
+    function setStatus(txt){ if(syncStatus) syncStatus.textContent=txt }
     function localSnapshot(){ return { taxPercent: state.taxPercent, freight: state.freight, products: state.products, vehicles: state.vehicles, layouts: state.layouts, selectedVehicleId: state.selectedVehicleId, expanded: state.expanded||{}, updatedAt: Date.now() } }
     async function cloudSaveNow(){ if(!wsRef) return; try{ await setDoc(wsRef, localSnapshot(), { merge:true }) }catch(e){ console.warn('Falha ao salvar na nuvem:', e?.message) } }
     function cloudScheduleSave(){ if(!wsRef||isApplyingRemote) return; clearTimeout(saveT); saveT=setTimeout(cloudSaveNow, 350) }
-    function applyRemote(data){ isApplyingRemote=true; try{ if((data.updatedAt||0)<=lastRemoteStamp) return; lastRemoteStamp=data.updatedAt||Date.now(); state.taxPercent=data.taxPercent??state.taxPercent; state.freight=data.freight??state.freight; state.products=Array.isArray(data.products)?data.products:state.products; state.vehicles=Array.isArray(data.vehicles)?data.vehicles:state.vehicles; state.layouts=data.layouts||state.layouts; state.selectedVehicleId=data.selectedVehicleId??state.selectedVehicleId; state.expanded=data.expanded||{}; persist(); render() } finally { isApplyingRemote=false } }
-    function subscribe(){ if(unsub) unsub(); unsub=onSnapshot(wsRef,(snap)=>{ if(!snap.exists()){ cloudSaveNow(); return } applyRemote(snap.data()||{}); setStatus('Conectado ✓') }, (err)=>{ console.error(err); setStatus('Erro de sincronização') }) }
-    async function connect(){ const wsId=(wsIdEl.value||'').trim(); if(!wsId){ alert('Informe um Espaço de trabalho.'); return } let cfg; try{ cfg=JSON.parse(fbConfigEl.value||'{}') }catch(e){ alert('Config Firebase inválida (JSON).'); return } if(!cfg || !cfg.apiKey || !cfg.projectId){ alert('Preencha a config Firebase completa (apiKey, projectId, authDomain, appId, etc).'); return } try{ localStorage.setItem('mcalc_ws_id', JSON.stringify(wsId)); localStorage.setItem('mcalc_fb_cfg', fbConfigEl.value||''); if(getApps().length){ app=getApps()[0] } else { app=initializeApp(cfg) } db=getFirestore(app); wsRef=doc(db,'workspaces',wsId); subscribe(); setStatus('Conectado ao espaço: '+wsId); }catch(e){ console.error(e); alert('Erro ao conectar ao Firebase: '+e.message); setStatus('Falha na conexão') } }
-    function disconnect(){ try{ if(unsub) unsub(); unsub=null }catch{} try{ if(app) deleteApp(app) }catch{} app=null; db=null; wsRef=null; setStatus('Desconectado') }
-    window.cloudScheduleSave=cloudScheduleSave; btnConnect&&btnConnect.addEventListener('click', connect); btnDisconnect&&btnDisconnect.addEventListener('click', disconnect);
-    const savedWs=localStorage.getItem('mcalc_ws_id'); const savedCfg=localStorage.getItem('mcalc_fb_cfg'); if(savedWs && savedCfg){ try{ wsIdEl.value=JSON.parse(savedWs)||'' }catch{} fbConfigEl.value=savedCfg; } if((wsIdEl.value||'').trim() && (fbConfigEl.value||'').trim()){ setTimeout(()=>connect(), 200) }
+    function applyRemote(data){ if(window.userEditingUntil && Date.now() < window.userEditingUntil) return; isApplyingRemote=true; try{ if((data.updatedAt||0)<=lastRemoteStamp) return; lastRemoteStamp=data.updatedAt||Date.now(); state.taxPercent=data.taxPercent??state.taxPercent; state.freight=data.freight??state.freight; state.products=Array.isArray(data.products)?data.products:state.products; state.vehicles=Array.isArray(data.vehicles)?data.vehicles:state.vehicles; state.layouts=data.layouts||state.layouts; state.selectedVehicleId=data.selectedVehicleId??state.selectedVehicleId; state.expanded=data.expanded||{}; store.set('mcalc_tax_percent',state.taxPercent); store.set('mcalc_freight',state.freight); store.set('mcalc_products',state.products); store.set('mcalc_vehicles',state.vehicles); store.set('mcalc_layouts',state.layouts); store.set('mcalc_selected_vehicle',state.selectedVehicleId); store.set('mcalc_expanded',state.expanded); if(typeof render==='function') render(); } finally { isApplyingRemote=false } }
+    function subscribe(){ if(unsub) unsub(); unsub=onSnapshot(wsRef,(snap)=>{ if(!snap.exists()){ cloudSaveNow(); return } applyRemote(snap.data()||{}); setStatus && setStatus('Conectado ✓') }, (err)=>{ console.error(err); setStatus && setStatus('Erro de sincronização') }) }
+    async function connect(){ const wsId=(document.getElementById('wsId')?.value||'').trim(); if(!wsId){ return } let cfg; try{ cfg=JSON.parse(document.getElementById('fbConfig')?.value||'{}') }catch(e){ alert('Config Firebase inválida (JSON).'); return } if(!cfg || !cfg.apiKey || !cfg.projectId){ alert('Preencha a config Firebase completa (apiKey, projectId, authDomain, appId, etc).'); return } try{ localStorage.setItem('mcalc_ws_id', JSON.stringify(wsId)); localStorage.setItem('mcalc_fb_cfg', document.getElementById('fbConfig')?.value||''); if(getApps().length){ app=getApps()[0] } else { app=initializeApp(cfg) } db=getFirestore(app); wsRef=doc(db,'workspaces',wsId); subscribe(); setStatus && setStatus('Conectado ao espaço: '+wsId); }catch(e){ console.error(e); alert('Erro ao conectar ao Firebase: '+e.message); setStatus && setStatus('Falha na conexão') } }
+    function disconnect(){ try{ if(unsub) unsub(); unsub=null }catch{} try{ if(app) deleteApp(app) }catch{} app=null; db=null; wsRef=null; setStatus && setStatus('Desconectado') }
+    window.cloudScheduleSave=cloudScheduleSave; window.userEditingUntil = 0;
+    const wsIdEl=document.getElementById('wsId'); const fbConfigEl=document.getElementById('fbConfig'); const btnConnect=document.getElementById('btnConnect'); const btnDisconnect=document.getElementById('btnDisconnect');
+    btnConnect&&btnConnect.addEventListener('click', connect); btnDisconnect&&btnDisconnect.addEventListener('click', disconnect);
+    const savedWs=localStorage.getItem('mcalc_ws_id'); const savedCfg=localStorage.getItem('mcalc_fb_cfg'); if(savedWs && savedCfg){ try{ if(wsIdEl) wsIdEl.value=JSON.parse(savedWs)||'' }catch{} if(fbConfigEl) fbConfigEl.value=savedCfg; } if((wsIdEl?.value||'').trim() && (fbConfigEl?.value||'').trim()){ setTimeout(()=>connect(), 200) }
     wsIdEl&&wsIdEl.addEventListener('input', ()=> localStorage.setItem('mcalc_ws_id', JSON.stringify(wsIdEl.value||'')));
     fbConfigEl&&fbConfigEl.addEventListener('input', ()=> localStorage.setItem('mcalc_fb_cfg', fbConfigEl.value||''));
     if(typeof initControls==='function') initControls(); if(typeof render==='function') render();
