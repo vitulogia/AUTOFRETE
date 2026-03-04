@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4c AutoSync (Mobile + Custo)</title>
-  <meta name="description" content="Versão otimizada para mobile. Sem arrastar; picker com busca sem acentos; slot com nome/peso/lucro. Botão X fixo. Lista com edição, filtros e ordenação. Soma total inclui custo dos produtos.">
+  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4e AutoSync (Mobile + Custo + Resumo + Margens)</title>
+  <meta name="description" content="Mobile otimizado. Sem arrastar; picker com busca sem acentos; slot com nome/peso/lucro. Botão X fixo. Lista com edição, filtros e ordenação. Soma total inclui custo. Em cada produto: lucro un., lucro por pallet, imposto, taxas ML e margens. Margem total da carga.">
   <style>
     :root{ --bg:#f6f7f9; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --primary:#0f172a; --primary-ink:#ffffff; --accent:#10b981; --danger:#ef4444; --danger-ink:#fff; --chip:#111827cc; }
     *{box-sizing:border-box} html,body{height:100%}
@@ -74,6 +74,14 @@
     .chev{font-size:12px;color:#6b7280;transition:transform .2s ease} 
     .product.open .chev{transform:rotate(90deg)}
 
+    /* Resumo financeiro por produto */
+    .finbox{margin-top:8px;border:1px dashed var(--line);border-radius:12px;padding:10px}
+    .finbox .title{font-weight:700;font-size:12px;color:#111827;margin-bottom:6px}
+    .fin{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:6px}
+    .fin li{font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px}
+    .fin li .v{font-weight:800}
+    .fin .hint{color:#64748b;font-size:11px}
+
     /* Mobile tweaks */
     @media (max-width: 768px){
       .container{padding:12px}
@@ -94,6 +102,7 @@
       .product .body .input{padding:12px}
       .product .name{font-size:15px}
       .muted{font-size:13px}
+      .fin{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -102,7 +111,7 @@
     <div class="header">
       <div style="display:flex;gap:12px;align-items:center">
         <div class="logo">☁️</div>
-        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4c)</h1><div class="sub">Mobile otimizado • X no canto do slot • Sem arrastar • Soma inclui <b>custo total</b>.</div></div>
+        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4e)</h1><div class="sub">Mobile otimizado • X no canto do slot • Sem arrastar • Soma com <b>custo total</b> • Resumo por produto (lucro/imposto/ML) • <b>Margens</b> por produto e da carga.</div></div>
       </div>
       <div><button class="btn" id="btnNewVehicle">+ Novo veículo</button> <button class="btn secondary" id="btnNewProduct">+ Novo produto</button></div>
     </div>
@@ -136,6 +145,7 @@
             <div class="stat"><div class="lbl">Custo total</div><div class="val" id="statCost">R$ 0,00</div></div>
             <div class="stat"><div class="lbl">Frete</div><div class="val" id="statFreight">R$ 0,00</div></div>
             <div class="stat"><div class="lbl">Resultado</div><div class="val" id="statFinal">R$ 0,00</div></div>
+            <div class="stat"><div class="lbl">Margem total</div><div class="val" id="statMargin">0%</div></div>
           </div>
         </div></div>
       </div>
@@ -210,16 +220,33 @@
     </div>
   </div></dialog>
 
-  <!-- App base + AutoSync + Picker (sem arrastar) + Mobile tweaks + Custo total -->
+  <!-- App base + AutoSync + Picker (sem arrastar) + Mobile tweaks + Custo total + Resumo por produto + Margens -->
   <script>
     const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>Array.from(e.querySelectorAll(s));
     const brl=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(v)?v:0);
     const kgFmt=v=>`${(v||0).toLocaleString('pt-BR',{maximumFractionDigits:2})} kg`; const tonFmt=v=>`${(v||0).toLocaleString('pt-BR',{maximumFractionDigits:3})} t`;
     const toNum=x=>{ if(typeof x==='number')return x; if(!x)return 0; return parseFloat(String(x).replace(',','.'))||0 }; const clamp=(n,min=0)=>isNaN(n)?min:Math.max(min,n);
+    const pctFmt=v=>`${(Number.isFinite(v)?v:0).toLocaleString('pt-BR',{maximumFractionDigits:2})}%`;
     function uid(p='id'){return p+'_'+Math.random().toString(36).slice(2,9)}
     function bestGrid(cap){ if(cap<=0)return{rows:1,cols:1}; let best={rows:1,cols:cap},bd=cap-1; for(let r=1;r<=Math.sqrt(cap);r++){ if(cap%r===0){ const c=Math.ceil(cap/r),d=Math.abs(c-r); if(d<bd){best={rows:r,cols:c};bd=d} } } if(best.rows*best.cols!==cap){ const rows=Math.floor(Math.sqrt(cap)), cols=Math.ceil(cap/rows); best={rows,cols} } return best }
     function fixedML(sale){ const s=toNum(sale); if(s>198.99)return 0; if(s>99.99)return 6; if(s>49.99)return 4; if(s>29.99)return 2; if(s>7.99)return 1; return 0 }
-    function computeProduct(p,taxPercent){ const mlPercent=clamp(toNum(p.mlPercent)); const sale=clamp(toNum(p.salePrice)); const buy=clamp(toNum(p.buyPrice)); const fixed=fixedML(sale); const mlPctVal=sale*mlPercent/100; const taxVal=sale*clamp(toNum(taxPercent))/100; const profitUnit=sale-buy-fixed-mlPctVal-taxVal; const profitPallet=profitUnit*clamp(toNum(p.unitsPerPallet),1); const palletWeightKg=clamp(toNum(p.unitWeightKg))*clamp(toNum(p.unitsPerPallet),1); return {sale,buy,fixed,mlPctVal,taxVal,profitUnit,profitPallet,palletWeightKg,mlPercent} }
+    function computeProduct(p,taxPercent){
+      const mlPercent=clamp(toNum(p.mlPercent));
+      const sale=clamp(toNum(p.salePrice));
+      const buy=clamp(toNum(p.buyPrice));
+      const units=clamp(toNum(p.unitsPerPallet),1);
+      const fixed=fixedML(sale);
+      const mlPctVal=sale*mlPercent/100;
+      const taxVal=sale*clamp(toNum(taxPercent))/100;
+      const profitUnit=sale-buy-fixed-mlPctVal-taxVal;
+      const profitPallet=profitUnit*units;
+      const palletWeightKg=clamp(toNum(p.unitWeightKg))*units;
+      const revenueUnit=sale;
+      const revenuePallet=sale*units;
+      const marginUnitPct=sale>0? (profitUnit/sale)*100 : 0;
+      const marginPalletPct=revenuePallet>0? (profitPallet/revenuePallet)*100 : 0;
+      return {sale,buy,fixed,mlPctVal,taxVal,profitUnit,profitPallet,palletWeightKg,mlPercent,revenueUnit,revenuePallet,marginUnitPct,marginPalletPct}
+    }
 
     const store={ get(k,f){try{const v=JSON.parse(localStorage.getItem(k));return (v===null||v===undefined)?f:v}catch(e){return f}}, set(k,v){localStorage.setItem(k,JSON.stringify(v))} };
 
@@ -233,7 +260,7 @@
     function persist(){ store.set('mcalc_tax_percent',state.taxPercent); store.set('mcalc_freight',state.freight); store.set('mcalc_products',state.products); store.set('mcalc_vehicles',state.vehicles); store.set('mcalc_layouts',state.layouts); store.set('mcalc_selected_vehicle',state.selectedVehicleId); store.set('mcalc_expanded',state.expanded); cloudScheduleSave && cloudScheduleSave(); }
 
     const selVehicle=$('#selVehicle'), vehMaxWeight=$('#vehMaxWeight'), truckWrap=$('#truckWrap'), truckMsg=$('#truckMsg'), productsEl=$('#products');
-    const inpTaxPercent=$('#inpTaxPercent'), inpFreight=$('#inpFreight'); const statProfit=$('#statProfit'), statWeight=$('#statWeight'), statFreight=$('#statFreight'), statFinal=$('#statFinal'), statCost=$('#statCost');
+    const inpTaxPercent=$('#inpTaxPercent'), inpFreight=$('#inpFreight'); const statProfit=$('#statProfit'), statWeight=$('#statWeight'), statFreight=$('#statFreight'), statFinal=$('#statFinal'), statCost=$('#statCost'), statMargin=$('#statMargin');
     const productRows={};
 
     const sortByEl = $('#prodSortBy');
@@ -266,7 +293,7 @@
     function ensureLayout(v){ if(!state.layouts[v.id] || state.layouts[v.id].length!==v.capacity){ state.layouts[v.id]=Array(v.capacity).fill(null) } }
     function getSelectedVehicle(){ let v=state.vehicles.find(x=>x.id===state.selectedVehicleId) || state.vehicles[0]; if(!v && state.vehicles.length){ v=state.vehicles[0]; state.selectedVehicleId=v.id } return v||null }
 
-    function vehicleTotals(v){ ensureLayout(v); const layout=state.layouts[v.id]; let totalProfit=0,totalWeight=0,totalCost=0; layout.forEach(pid=>{ if(!pid)return; const p=state.products.find(x=>x.id===pid); if(!p)return; const calc=computeProduct(p,state.taxPercent); totalProfit += calc.profitPallet; totalWeight += calc.palletWeightKg; const costPallet = clamp(toNum(p.buyPrice)) * clamp(toNum(p.unitsPerPallet),1); totalCost += costPallet; }); return { totalProfit, totalWeight, totalCost } }
+    function vehicleTotals(v){ ensureLayout(v); const layout=state.layouts[v.id]; let totalProfit=0,totalWeight=0,totalCost=0,totalRevenue=0; layout.forEach(pid=>{ if(!pid)return; const p=state.products.find(x=>x.id===pid); if(!p)return; const calc=computeProduct(p,state.taxPercent); totalProfit += calc.profitPallet; totalWeight += calc.palletWeightKg; const costPallet = clamp(toNum(p.buyPrice)) * clamp(toNum(p.unitsPerPallet),1); totalCost += costPallet; totalRevenue += calc.revenuePallet; }); return { totalProfit, totalWeight, totalCost, totalRevenue } }
 
     function renderVehicles(){ selVehicle.innerHTML=''; state.vehicles.forEach(v=>{ const o=document.createElement('option'); o.value=v.id; o.textContent=`${v.name} — ${v.capacity} pallets`; selVehicle.appendChild(o) }); if(state.vehicles.length){ const ok=state.vehicles.some(v=>v.id===state.selectedVehicleId); if(!ok) state.selectedVehicleId=state.vehicles[0].id; selVehicle.value=state.selectedVehicleId } selVehicle.onchange=()=>{ state.selectedVehicleId=selVehicle.value; persist(); renderTruck(); renderTotals(); syncVehLimitInput(); }; syncVehLimitInput(); }
 
@@ -303,7 +330,25 @@
       $$('button[data-remove]',truckWrap).forEach(btn=>btn.addEventListener('click',()=>{ const idx=Number(btn.getAttribute('data-remove')); layout[idx]=null; persist(); renderTruck(); renderTotals(); }))
     }
 
-    function updateProductRowUI(p, row){ if(!row) return; const c=computeProduct(p,state.taxPercent); const muted=row.querySelector('.muted'); if(muted){ muted.innerHTML=`Lucro un.: <strong>${brl(c.profitUnit)}</strong> • Pallet: <strong>${brl(c.profitPallet)}</strong>` } }
+    // Atualiza UI do item sem perder foco
+    function updateProductRowUI(p, row){
+      if(!row) return; const c=computeProduct(p,state.taxPercent);
+      const muted=row.querySelector('.muted'); if(muted){ muted.innerHTML=`Lucro un.: <strong>${brl(c.profitUnit)}</strong> • Pallet: <strong>${brl(c.profitPallet)}</strong>` }
+      // Resumo financeiro
+      const map={
+        profitUnit: brl(c.profitUnit),
+        profitPallet: brl(c.profitPallet),
+        tax: brl(c.taxVal),
+        mlpct: brl(c.mlPctVal),
+        mlfixed: brl(c.fixed),
+        mltotal: brl(c.mlPctVal + c.fixed),
+        taxPct: `${(state.taxPercent||0).toLocaleString('pt-BR')}%`,
+        mlPctNum: `${(c.mlPercent||0).toLocaleString('pt-BR')}%`,
+        mUnit: pctFmt(c.marginUnitPct),
+        mPallet: pctFmt(c.marginPalletPct)
+      };
+      Object.entries(map).forEach(([k,val])=>{ const el=row.querySelector(`[data-fin="${k}"]`); if(el) el.textContent=val });
+    }
     function updateAllProductRows(){ Object.entries(productRows).forEach(([id,row])=>{ const p=state.products.find(x=>x.id===id); if(p) updateProductRowUI(p,row) }) }
 
     function renderProducts(){ productsEl.innerHTML=''; for(const k in productRows) delete productRows[k]; if(!Array.isArray(state.products)) state.products=[]; const items=state.products.map(p=>{ const c=computeProduct(p,state.taxPercent); return {p,c}; }); const wantPos=!!(filterPosEl&&filterPosEl.checked); const wantNeg=!!(filterNegEl&&filterNegEl.checked); const filtered=items.filter(({c})=>{ if(!wantPos && !wantNeg) return true; if(wantPos && !wantNeg) return c.profitPallet>=0; if(!wantPos && wantNeg) return c.profitPallet<0; return true; }); const key=sortByEl?sortByEl.value:'name'; const dir=(sortDirEl?sortDirEl.value:'asc')==='asc'?1:-1; filtered.sort((a,b)=>{ let va,vb; switch(key){ case 'profitUnit': va=a.c.profitUnit; vb=b.c.profitUnit; break; case 'profitPallet': va=a.c.profitPallet; vb=b.c.profitPallet; break; case 'weightPallet': va=a.c.palletWeightKg; vb=b.c.palletWeightKg; break; case 'sale': va=a.c.sale; vb=b.c.sale; break; default: va=(a.p.name||'').toLowerCase(); vb=(b.p.name||'').toLowerCase(); } if(va<vb) return -1*dir; if(va>vb) return 1*dir; return 0; }); filtered.forEach(({p,c})=>{ const row=document.createElement('div'); row.className='product'+(state.expanded[p.id]?' open':''); row.dataset.id=p.id; row.innerHTML=`
@@ -323,10 +368,36 @@
               <label><div class="sub">Peso unitário (kg)</div><input class="input" type="number" step="0.01" min="0" data-edit="weight" value="${p.unitWeightKg}"></label>
               <label><div class="sub">Taxa % ML (este produto)</div><input class="input" type="number" step="0.1" min="0" data-edit="mlpct" value="${p.mlPercent||14}"></label>
             </div>
+            <div class="finbox">
+              <div class="title">Resumo financeiro (auto)</div>
+              <ul class="fin">
+                <li><span>Lucro unitário</span><span class="v" data-fin="profitUnit">${brl(c.profitUnit)}</span></li>
+                <li><span>Lucro por pallet</span><span class="v" data-fin="profitPallet">${brl(c.profitPallet)}</span></li>
+                <li><span>Imposto (sobre venda)</span><span><span class="v" data-fin="tax">${brl(c.taxVal)}</span> <span class="hint" data-fin="taxPct">${(state.taxPercent||0).toLocaleString('pt-BR')}%</span></span></li>
+                <li><span>Taxa ML %</span><span><span class="v" data-fin="mlpct">${brl(c.mlPctVal)}</span> <span class="hint" data-fin="mlPctNum">${(c.mlPercent||0).toLocaleString('pt-BR')}%</span></span></li>
+                <li><span>Taxa ML fixa</span><span class="v" data-fin="mlfixed">${brl(c.fixed)}</span></li>
+                <li><span>Total taxas ML</span><span class="v" data-fin="mltotal">${brl(c.mlPctVal + c.fixed)}</span></li>
+                <li><span>Margem unitária</span><span class="v" data-fin="mUnit">${pctFmt(c.marginUnitPct)}</span></li>
+                <li><span>Margem por pallet</span><span class="v" data-fin="mPallet">${pctFmt(c.marginPalletPct)}</span></li>
+              </ul>
+            </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn danger" title="Excluir">🗑 Excluir produto</button></div>
-          </div>`; productRows[p.id]=row; row.querySelector('[data-toggle]').addEventListener('click',(e)=>{ if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') }); const delBtn=row.querySelector('button[title="Excluir"]'); if(delBtn) delBtn.addEventListener('click',()=>{ state.products=state.products.filter(x=>x.id!==p.id); Object.keys(state.layouts).forEach(vid=>{ state.layouts[vid]=(state.layouts[vid]||[]).map(x=>x===p.id?null:x) }); persist(); renderProducts(); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ p.buyPrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ p.salePrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ p.unitWeightKg=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ p.mlPercent=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); productsEl.appendChild(row); }); if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) } }
+          </div>`;
+        productRows[p.id]=row;
+        row.querySelector('[data-toggle]').addEventListener('click',(e)=>{ if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') });
+        const delBtn=row.querySelector('button[title="Excluir"]'); if(delBtn) delBtn.addEventListener('click',()=>{ state.products=state.products.filter(x=>x.id!==p.id); Object.keys(state.layouts).forEach(vid=>{ state.layouts[vid]=(state.layouts[vid]||[]).map(x=>x===p.id?null:x) }); persist(); renderProducts(); renderTotals(); renderTruck(); });
+        // Handlers de edição (atualizam só o row)
+        row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ p.buyPrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ p.salePrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ p.unitWeightKg=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ p.mlPercent=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
+        productsEl.appendChild(row);
+      });
+      if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) }
+    }
 
-    function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`${kgFmt(0)} • ${tonFmt(0)}`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); statCost.textContent=brl(0); return } const { totalProfit, totalWeight, totalCost } = vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${kgFmt(totalWeight)} de ${kgFmt(limit)} • ${tonFmt(totalWeight/1000)}`:`${kgFmt(totalWeight)} • ${tonFmt(totalWeight/1000)}`; statWeight.style.color=exceeded?'#dc2626':''; statCost.textContent=brl(totalCost); statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.style.color=final>=0?'#22c55e':'#ef4444'; if(exceeded){ showMsg('Peso total excede o limite deste veículo. Considere remover pallets ou aumentar o limite.','error') } }
+    function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`${kgFmt(0)} • ${tonFmt(0)}`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); statCost.textContent=brl(0); statMargin.textContent=pctFmt(0); return } const { totalProfit, totalWeight, totalCost, totalRevenue } = vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${kgFmt(totalWeight)} de ${kgFmt(limit)} • ${tonFmt(totalWeight/1000)}`:`${kgFmt(totalWeight)} • ${tonFmt(totalWeight/1000)}`; statWeight.style.color=exceeded?'#dc2626':''; statCost.textContent=brl(totalCost); statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.style.color=final>=0?'#22c55e':'#ef4444'; const marginTotalPct = totalRevenue>0 ? (totalProfit/totalRevenue)*100 : 0; statMargin.textContent=pctFmt(marginTotalPct); statMargin.style.color=marginTotalPct>=0?'#22c55e':'#ef4444'; if(exceeded){ showMsg('Peso total excede o limite deste veículo. Considere remover pallets ou aumentar o limite.','error') } }
 
     function render(){ renderVehicles(); renderTruck(); renderProducts(); renderTotals(); }
   </script>
