@@ -4,11 +4,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4g AutoSync (Padrões + Resultado colorido)</title>
-  <meta name="description" content="Mobile otimizado. Sem arrastar; picker com busca sem acentos; slot com nome/peso/lucro. Botão X fixo. Lista com edição, filtros e ordenação. Custo total, margens, resultado colorido. Padrões (cores/texturas) por produto na lista e no caminhão. Proteção de foco ao editar.">
+  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4h AutoSync (Slots com padrão + Mobile vertical)</title>
+  <meta name="description" content="Pallets preenchidos pela cor e textura do produto (sem fundo preto). Mobile só rolagem vertical; lista de produtos abaixo. Resultado com cor/negrito; padrões por produto; proteção de foco ao digitar.">
   <style>
     :root{ --bg:#f6f7f9; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --primary:#0f172a; --primary-ink:#ffffff; --accent:#10b981; --danger:#ef4444; --danger-ink:#fff; --chip:#111827cc; }
-    *{box-sizing:border-box} html,body{height:100%}
+    *{box-sizing:border-box}
+    html,body{height:100%; overflow-x:hidden} /* somente rolagem vertical */
     body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif;background:linear-gradient(#fff,var(--bg));color:var(--ink)}
     .container{max-width:1200px;margin:0 auto;padding:20px}
     .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
@@ -18,20 +19,19 @@
     .btn.secondary{background:#f3f4f6;color:#111827} .btn.danger{background:#fee2e2;color:#b91c1c}
     .input,select{border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
     .sub{font-size:12px;color:var(--muted)} h1{margin:0;font-size:22px}
-    .grid{display:grid;gap:12px} .grid.cols-4{grid-template-columns:repeat(4,1fr)} .grid.cols-2{grid-template-columns:1fr 1fr}
-    .badge{font-size:11px;color:var(--muted)}
+    .grid{display:grid;gap:16px}
+    .pagegrid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}
 
     /* Caminhão / Slots */
-    .truck{position:relative;background:#0b1020;border-radius:24px;color:#fff;padding:16px;border:1px solid #0b1020;box-shadow:0 6px 24px rgba(2,6,23,.35);overflow-x:auto}
-    .slot{position:relative;aspect-ratio:1/1;border:2px dashed #4b5563;border-radius:12px;background:#0f172a;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;min-width:110px}
-    .slot.filled{border-style:solid;border-color:#6ee7b7;cursor:default}
-    .slot .pat{position:absolute;inset:0;opacity:.35;z-index:1;}
+    .truck{position:relative;border-radius:24px;color:#fff;padding:16px;border:1px solid #0b1020;box-shadow:0 6px 24px rgba(2,6,23,.18);overflow-x:hidden;background:#0b1020}
+    .slot{position:relative;aspect-ratio:1/1;border:2px dashed #4b5563;border-radius:12px;background:transparent;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;min-width:110px}
+    .slot.filled{border-style:solid;border-color:#6ee7b7;}
 
     /* Conteúdo em linhas dentro do slot */
     .slotlines{position:relative;z-index:2;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;text-align:center;max-width:95%;padding-top:30px}
     .slotlines .name{background:rgba(255,255,255,.92);color:#111827;padding:3px 8px;border-radius:8px;font-size:12px;font-weight:700}
-    .slotlines .weight{color:#e5e7eb;font-size:13px}
-    .slotlines .profit{font-weight:800}
+    .slotlines .weight{color:#e5e7eb;font-size:13px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+    .slotlines .profit{font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.25)}
 
     /* Cores de lucro/resultado */
     .profit{font-weight:800}
@@ -43,9 +43,6 @@
     .slot .remove:hover{filter:brightness(1.05)}
     .slot .remove:focus{outline:2px solid #fff;outline-offset:2px}
     .slot .remove .x{font-weight:900;font-size:16px;line-height:1}
-
-    dialog{border:none;border-radius:16px;box-shadow:0 24px 48px rgba(2,6,23,.35)} dialog::backdrop{background:rgba(0,0,0,.45)}
-    .modal .content{padding:16px 18px}
 
     /* Picker */
     .picker-head{display:flex;gap:10px;align-items:center;margin-bottom:10px}
@@ -79,19 +76,20 @@
     .stats .val{font-weight:700}
     #statFinal.profit{font-weight:800}
 
-    /* Mobile */
+    /* Mobile: somente vertical + lista embaixo + slots responsivos sem scroll horizontal */
     @media (max-width: 768px){
       .container{padding:12px}
       h1{font-size:18px}
-      .grid.cols-4{grid-template-columns:1fr}
-      .grid.cols-2{grid-template-columns:1fr}
+      .pagegrid{grid-template-columns:1fr !important}
       .header>div:last-child{width:100%;display:flex;gap:8px}
       .header .btn{flex:1}
       .btn{padding:12px}
       .input,select{padding:12px}
       .prod-controls .input{min-width:unset}
-      .truck{padding:14px}
-      .slot{min-width:120px}
+      .truck{padding:14px; overflow-x:hidden}
+      /* força slots fluídos na largura disponível (sem rolagem horizontal) */
+      .truck .slots{grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)) !important}
+      .slot{min-width:unset}
       .slot .remove{right:8px; top:8px; width:32px; height:32px}
       .slotlines{padding-top:38px}
       .picker-body{min-width:0; width:min(92vw, 560px)}
@@ -107,12 +105,12 @@
     <div class="header">
       <div style="display:flex;gap:12px;align-items:center">
         <div class="logo">☁️</div>
-        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4g)</h1><div class="sub">Padrões por produto (cores/texturas) • Lucros e <b>Resultado</b> com cor e negrito • Proteção de foco ao editar.</div></div>
+        <div><h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4h)</h1><div class="sub">Slots sem fundo preto (preenchidos pela cor/textura do produto) • Mobile somente rolagem vertical • Lista de produtos abaixo.</div></div>
       </div>
       <div><button class="btn" id="btnNewVehicle">+ Novo veículo</button> <button class="btn secondary" id="btnNewProduct">+ Novo produto</button></div>
     </div>
 
-    <div class="grid" style="grid-template-columns:2fr 1fr;gap:16px;margin-top:16px">
+    <div class="pagegrid">
       <div>
         <div class="card"><div class="content">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="background:#f4f4f5;border-radius:12px;padding:6px 8px;color:#3f3f46;font-size:12px">🚚</div><div><div style="font-weight:700">Veículo de frete</div><div class="sub">Clique em um slot vazio para inserir. Clique no <b>X</b> para remover.</div></div></div>
@@ -140,7 +138,7 @@
             <div style="background:#f4f4f5;border-radius:12px;padding:6px 8px;color:#3f3f46;font-size:12px">📦</div>
             <div>
               <div style="font-weight:700">Produtos</div>
-              <div class="sub">Lista (clique para editar). Sem arrastar. Cada item tem um padrão aplicado (cor/texture).</div>
+              <div class="sub">Lista (clique para editar). Cada item tem cor/texture vinculada.</div>
             </div>
           </div>
           <div class="prod-controls">
@@ -180,7 +178,7 @@
   </div><div class="footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn secondary" data-close>Cancelar</button><button class="btn" id="vehAdd">Adicionar veículo</button></div></div></dialog>
 
   <dialog id="dlgProduct" class="modal"><div class="content" style="padding:16px 18px;min-width:360px"><div style="font-weight:700;margin-bottom:8px">Novo produto</div>
-    <div class="grid cols-2">
+    <div class="grid" style="grid-template-columns:1fr 1fr">
       <label class="col"><div class="sub">Nome</div><input id="prodName" class="input" placeholder="Ex.: Água Mineral 1,5L"></label>
       <label><div class="sub">Preço de compra (R$)</div><input id="prodBuy" class="input" type="number" min="0" step="0.01"></label>
       <label><div class="sub">Preço de venda (R$)</div><input id="prodSale" class="input" type="number" min="0" step="0.01"></label>
@@ -286,7 +284,8 @@
     function renderVehicles(){ const sel=selVehicle; sel.innerHTML=''; state.vehicles.forEach(v=>{ const o=document.createElement('option'); o.value=v.id; o.textContent=`${v.name} — ${v.capacity} pallets`; sel.appendChild(o) }); if(state.vehicles.length){ const ok=state.vehicles.some(v=>v.id===state.selectedVehicleId); if(!ok) state.selectedVehicleId=state.vehicles[0].id; sel.value=state.selectedVehicleId } sel.onchange=()=>{ state.selectedVehicleId=sel.value; persist(); renderTruck(); renderTotals(); syncVehLimitInput(); }; syncVehLimitInput(); }
     function syncVehLimitInput(){ const v=getSelectedVehicle(); if(!v){ vehMaxWeight.value=0; return } vehMaxWeight.value=v.maxWeightKg||0; vehMaxWeight.oninput=()=>{ v.maxWeightKg=Math.max(0,Math.floor(toNum(vehMaxWeight.value)||0)); persist(); renderTotals(); } }
 
-    function renderPickerList(){ const list=$('#pickerList'); if(!list)return; list.innerHTML=''; const v=getSelectedVehicle(); const deaccent=(s)=> (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=deaccent(($('#pickerSearch')?.value||'')).toLowerCase().trim(); let count=0; state.products.forEach(p=>{ const nameNorm=deaccent(p.name).toLowerCase(); if(q && !nameNorm.includes(q)) return; const c=computeProduct(p,state.taxPercent); const item=document.createElement('div'); item.className='pitem'; item.innerHTML=`<div>
+    const deaccent = (s)=> (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    function renderPickerList(){ const list=$('#pickerList'); if(!list)return; list.innerHTML=''; const v=getSelectedVehicle(); const q=deaccent(($('#pickerSearch')?.value||'')).toLowerCase().trim(); let count=0; state.products.forEach(p=>{ const nameNorm=deaccent(p.name).toLowerCase(); if(q && !nameNorm.includes(q)) return; const c=computeProduct(p,state.taxPercent); const item=document.createElement('div'); item.className='pitem'; item.innerHTML=`<div>
         <div class="pname">${p.name}</div>
         <div class="pmeta">Unid/pallet: ${p.unitsPerPallet} • Peso unit.: ${p.unitWeightKg||0} kg</div>
       </div>
@@ -295,17 +294,26 @@
         <span class="pp ${c.profitPallet>0?'good':(c.profitPallet<0?'bad':'')}">💰 ${brl(c.profitPallet)}</span>
       </div>`; item.addEventListener('click',()=>{ if(pickerSlotIndex==null)return; const layout=state.layouts[v.id]; const totals=vehicleTotals(v); const next=totals.totalWeight+c.palletWeightKg; if(v.maxWeightKg>0 && next>v.maxWeightKg){ alert('Não é possível adicionar: limite de peso do veículo seria excedido.'); return } layout[pickerSlotIndex]=p.id; persist(); renderTruck(); renderTotals(); $('#dlgPicker').close(); }); list.appendChild(item); count++; }); $('#pickerCount').textContent=`${count} produto(s)`; if(count===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto encontrado.'; list.appendChild(empty) } }
 
-    function renderTruck(){ const v=getSelectedVehicle(); if(!v){ truckWrap.innerHTML='<div class="badge">Nenhum veículo cadastrado.</div>'; return } ensureLayout(v); const layout=state.layouts[v.id]; let slots=''; for(let i=0;i<layout.length;i++){ const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner='<div class="badge" style="color:#94a3b8">Clique para adicionar</div>'; let patHTML=''; if(filled){ const c=computeProduct(prod,state.taxPercent); const pcls=c.profitPallet>0?'good':(c.profitPallet<0?'bad':''); const col=colorFor(prod); const pat=patternFor(prod.colorIdx||0,col); const extra = (pat.bgSize?`background-size:${pat.bgSize};`:'') + (pat.bgPos?`background-position:${pat.bgPos};`:''); patHTML=`<div class="pat" style="background-color:${pat.bgColor}; background-image:${pat.bgImage}; ${extra}"></div>`;
-          inner=`
-          <button class="remove" title="Remover pallet" aria-label="Remover pallet" data-remove="${i}"><span class="x">×</span></button>
-          ${patHTML}
-          <div class="slotlines">
-            <div class="name">${prod.name}</div>
-            <div class="weight">⚖️ ${kgFmt(c.palletWeightKg)}</div>
-            <div class="profit ${pcls}">💰 ${brl(c.profitPallet)}</div>
-          </div>` }
-        slots+=`<div class="slot ${filled?'filled':''}" data-slot="${i}"><div style="position:relative;z-index:2;text-align:center">${inner}</div></div>` }
-      truckWrap.innerHTML=`<div class="truck"><div class="slots" style="display:grid;gap:8px;grid-template-columns:repeat(${getSelectedVehicle().cols}, minmax(110px, 1fr));">${slots}</div></div>`;
+    function renderTruck(){ const v=getSelectedVehicle(); if(!v){ truckWrap.innerHTML='<div class="badge">Nenhum veículo cadastrado.</div>'; return } ensureLayout(v); const layout=state.layouts[v.id]; let slotsHTML='';
+      for(let i=0;i<layout.length;i++){
+        const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner=''; let style='';
+        if(filled){ const c=computeProduct(prod,state.taxPercent); const pcls=c.profitPallet>0?'good':(c.profitPallet<0?'bad':''); const col=colorFor(prod); const pat=patternFor(prod.colorIdx||0,col); const extra=(pat.bgSize?`background-size:${pat.bgSize};`:'')+(pat.bgPos?`background-position:${pat.bgPos};`:''); style=`background-color:${pat.bgColor}; background-image:${pat.bgImage}; ${extra}`;
+          inner = `
+            <button class="remove" title="Remover pallet" aria-label="Remover pallet" data-remove="${i}"><span class="x">×</span></button>
+            <div class="slotlines">
+              <div class="name">${prod.name}</div>
+              <div class="weight">⚖️ ${kgFmt(c.palletWeightKg)}</div>
+              <div class="profit ${pcls}">💰 ${brl(c.profitPallet)}</div>
+            </div>`;
+        } else {
+          inner = '<div class="badge" style="color:#94a3b8">Clique para adicionar</div>';
+        }
+        slotsHTML += `<div class="slot ${filled?'filled':''}" data-slot="${i}" style="${style}"><div style="position:relative;z-index:2;text-align:center">${inner}</div></div>`;
+      }
+      // Desktop: respeita grade do veículo; Mobile: CSS força auto-fill sem scroll horizontal
+      truckWrap.innerHTML = `<div class="truck">
+        <div class="slots" style="display:grid;gap:8px;grid-template-columns:repeat(${getSelectedVehicle().cols}, minmax(110px, 1fr));">${slotsHTML}</div>
+      </div>`;
       $$('.slot',truckWrap).forEach(el=>{ if(!el.classList.contains('filled')){ el.addEventListener('click',()=>{ const idx=Number(el.dataset.slot); pickerSlotIndex=idx; $('#dlgPicker').showModal(); renderPickerList(); }); }});
       $$('button[data-remove]',truckWrap).forEach(btn=>btn.addEventListener('click',()=>{ const idx=Number(btn.getAttribute('data-remove')); layout[idx]=null; persist(); renderTruck(); renderTotals(); }))
     }
@@ -318,7 +326,7 @@
       const hdrUnit=row.querySelector('[data-fin="profitUnit"]'); const hdrPallet=row.querySelector('[data-fin="profitPallet"]');
       if(hdrUnit){ hdrUnit.textContent=brl(c.profitUnit); hdrUnit.classList.remove('good','bad'); hdrUnit.classList.add('profit', c.profitUnit>0?'good':(c.profitUnit<0?'bad':null)); }
       if(hdrPallet){ hdrPallet.textContent=brl(c.profitPallet); hdrPallet.classList.remove('good','bad'); hdrPallet.classList.add('profit', c.profitPallet>0?'good':(c.profitPallet<0?'bad':null)); }
-      // Resumo financeiro (já tratado anteriormente)
+      // Resumo financeiro
       const map={ profitUnit:c.profitUnit, profitPallet:c.profitPallet, tax:c.taxVal, mlpct:c.mlPctVal, mlfixed:c.fixed, mltotal:c.mlPctVal+c.fixed, taxPct:`${(state.taxPercent||0).toLocaleString('pt-BR')}%`, mlPctNum:`${(c.mlPercent||0).toLocaleString('pt-BR')}%`, mUnit:pctFmt(c.marginUnitPct), mPallet:pctFmt(c.marginPalletPct) };
       Object.entries(map).forEach(([k,val])=>{ row.querySelectorAll(`[data-fin="${k}"]`).forEach(el=>{ if(k==='profitUnit'||k==='profitPallet'){ el.textContent=brl(val); el.classList.remove('good','bad'); el.classList.add('profit', val>0?'good':(val<0?'bad':null)); } else { el.textContent=typeof val==='number'?brl(val):val } }) });
     }
@@ -334,24 +342,24 @@
             <span class="chev">▶</span>
           </div>
           <div class="body">
-            <div class="grid cols-2">
+            <div class="grid" style="grid-template-columns:1fr 1fr">
               <label><div class="sub">Preço de compra (R$)</div><input class="input" type="number" step="0.01" min="0" data-edit="buy" value="${p.buyPrice}"></label>
               <label><div class="sub">Preço de venda (R$)</div><input class="input" type="number" step="0.01" min="0" data-edit="sale" value="${p.salePrice}"></label>
               <label><div class="sub">Unidades / pallet</div><input class="input" type="number" step="1" min="1" data-edit="units" value="${p.unitsPerPallet}"></label>
               <label><div class="sub">Peso unitário (kg)</div><input class="input" type="number" step="0.01" min="0" data-edit="weight" value="${p.unitWeightKg}"></label>
               <label><div class="sub">Taxa % ML (este produto)</div><input class="input" type="number" step="0.1" min="0" data-edit="mlpct" value="${p.mlPercent||14}"></label>
             </div>
-            <div class="finbox">
-              <div class="title">Resumo financeiro (auto)</div>
-              <ul class="fin">
-                <li><span>Lucro unitário</span><span class="v profit" data-fin="profitUnit">${brl(c.profitUnit)}</span></li>
-                <li><span>Lucro por pallet</span><span class="v profit" data-fin="profitPallet">${brl(c.profitPallet)}</span></li>
-                <li><span>Imposto (sobre venda)</span><span><span class="v" data-fin="tax">${brl(c.taxVal)}</span> <span class="hint" data-fin="taxPct">${(state.taxPercent||0).toLocaleString('pt-BR')}%</span></span></li>
-                <li><span>Taxa ML %</span><span><span class="v" data-fin="mlpct">${brl(c.mlPctVal)}</span> <span class="hint" data-fin="mlPctNum">${(c.mlPercent||0).toLocaleString('pt-BR')}%</span></span></li>
-                <li><span>Taxa ML fixa</span><span class="v" data-fin="mlfixed">${brl(c.fixed)}</span></li>
-                <li><span>Total taxas ML</span><span class="v" data-fin="mltotal">${brl(c.mlPctVal + c.fixed)}</span></li>
-                <li><span>Margem unitária</span><span class="v" data-fin="mUnit">${pctFmt(c.marginUnitPct)}</span></li>
-                <li><span>Margem por pallet</span><span class="v" data-fin="mPallet">${pctFmt(c.marginPalletPct)}</span></li>
+            <div class="finbox" style="margin-top:8px;border:1px dashed var(--line);border-radius:12px;padding:10px">
+              <div class="title" style="font-weight:700;font-size:12px;color:#111827;margin-bottom:6px">Resumo financeiro (auto)</div>
+              <ul class="fin" style="list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(160px,1fr));gap:6px">
+                <li style="font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px"><span>Lucro unitário</span><span class="v profit" data-fin="profitUnit">${brl(c.profitUnit)}</span></li>
+                <li style="font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px"><span>Lucro por pallet</span><span class="v profit" data-fin="profitPallet">${brl(c.profitPallet)}</span></li>
+                <li style="font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px"><span>Imposto (sobre venda)</span><span><span class="v" data-fin="tax">${brl(c.taxVal)}</span> <span class="hint" data-fin="taxPct" style="color:#64748b;font-size:11px">${(state.taxPercent||0).toLocaleString('pt-BR')}%</span></span></li>
+                <li style="font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px"><span>Taxa ML %</span><span><span class="v" data-fin="mlpct">${brl(c.mlPctVal)}</span> <span class="hint" data-fin="mlPctNum" style="color:#64748b;font-size:11px">${(c.mlPercent||0).toLocaleString('pt-BR')}%</span></span></li>
+                <li style="font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px"><span>Taxa ML fixa</span><span class="v" data-fin="mlfixed">${brl(c.fixed)}</span></li>
+                <li style="font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px"><span>Total taxas ML</span><span class="v" data-fin="mltotal">${brl(c.mlPctVal + c.fixed)}</span></li>
+                <li style="font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px"><span>Margem unitária</span><span class="v" data-fin="mUnit">${pctFmt(c.marginUnitPct)}</span></li>
+                <li style="font-size:12px;color:#334155;display:flex;justify-content:space-between;gap:8px"><span>Margem por pallet</span><span class="v" data-fin="mPallet">${pctFmt(c.marginPalletPct)}</span></li>
               </ul>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn danger" title="Excluir">🗑 Excluir produto</button></div>
@@ -383,15 +391,14 @@
     import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
     let app=null, db=null, unsub=null, wsRef=null, isApplyingRemote=false, saveT=null, lastRemoteStamp=0;
     const $=(s,e=document)=>e.querySelector(s);
-    const syncStatus=document.getElementById('syncStatus');
-    function setStatus(txt){ if(syncStatus) syncStatus.textContent=txt }
+    function setStatus(txt){ const el=document.getElementById('syncStatus'); if(el) el.textContent=txt }
     function localSnapshot(){ return { taxPercent: state.taxPercent, freight: state.freight, products: state.products, vehicles: state.vehicles, layouts: state.layouts, selectedVehicleId: state.selectedVehicleId, expanded: state.expanded||{}, updatedAt: Date.now() } }
     async function cloudSaveNow(){ if(!wsRef) return; try{ await setDoc(wsRef, localSnapshot(), { merge:true }) }catch(e){ console.warn('Falha ao salvar na nuvem:', e?.message) } }
     function cloudScheduleSave(){ if(!wsRef||isApplyingRemote) return; clearTimeout(saveT); saveT=setTimeout(cloudSaveNow, 350) }
     function applyRemote(data){ if(window.userEditingUntil && Date.now() < window.userEditingUntil) return; isApplyingRemote=true; try{ if((data.updatedAt||0)<=lastRemoteStamp) return; lastRemoteStamp=data.updatedAt||Date.now(); state.taxPercent=data.taxPercent??state.taxPercent; state.freight=data.freight??state.freight; state.products=Array.isArray(data.products)?data.products:state.products; state.vehicles=Array.isArray(data.vehicles)?data.vehicles:state.vehicles; state.layouts=data.layouts||state.layouts; state.selectedVehicleId=data.selectedVehicleId??state.selectedVehicleId; state.expanded=data.expanded||{}; store.set('mcalc_tax_percent',state.taxPercent); store.set('mcalc_freight',state.freight); store.set('mcalc_products',state.products); store.set('mcalc_vehicles',state.vehicles); store.set('mcalc_layouts',state.layouts); store.set('mcalc_selected_vehicle',state.selectedVehicleId); store.set('mcalc_expanded',state.expanded); if(typeof render==='function') render(); } finally { isApplyingRemote=false } }
-    function subscribe(){ if(unsub) unsub(); unsub=onSnapshot(wsRef,(snap)=>{ if(!snap.exists()){ cloudSaveNow(); return } applyRemote(snap.data()||{}); setStatus && setStatus('Conectado ✓') }, (err)=>{ console.error(err); setStatus && setStatus('Erro de sincronização') }) }
-    async function connect(){ const wsId=(document.getElementById('wsId')?.value||'').trim(); if(!wsId){ return } let cfg; try{ cfg=JSON.parse(document.getElementById('fbConfig')?.value||'{}') }catch(e){ alert('Config Firebase inválida (JSON).'); return } if(!cfg || !cfg.apiKey || !cfg.projectId){ alert('Preencha a config Firebase completa (apiKey, projectId, authDomain, appId, etc).'); return } try{ localStorage.setItem('mcalc_ws_id', JSON.stringify(wsId)); localStorage.setItem('mcalc_fb_cfg', document.getElementById('fbConfig')?.value||''); if(getApps().length){ app=getApps()[0] } else { app=initializeApp(cfg) } db=getFirestore(app); wsRef=doc(db,'workspaces',wsId); subscribe(); setStatus && setStatus('Conectado ao espaço: '+wsId); }catch(e){ console.error(e); alert('Erro ao conectar ao Firebase: '+e.message); setStatus && setStatus('Falha na conexão') } }
-    function disconnect(){ try{ if(unsub) unsub(); unsub=null }catch{} try{ if(app) deleteApp(app) }catch{} app=null; db=null; wsRef=null; setStatus && setStatus('Desconectado') }
+    function subscribe(){ if(unsub) unsub(); unsub=onSnapshot(wsRef,(snap)=>{ if(!snap.exists()){ cloudSaveNow(); return } applyRemote(snap.data()||{}); setStatus('Conectado ✓') }, (err)=>{ console.error(err); setStatus('Erro de sincronização') }) }
+    async function connect(){ const wsId=(document.getElementById('wsId')?.value||'').trim(); if(!wsId){ return } let cfg; try{ cfg=JSON.parse(document.getElementById('fbConfig')?.value||'{}') }catch(e){ alert('Config Firebase inválida (JSON).'); return } if(!cfg || !cfg.apiKey || !cfg.projectId){ alert('Preencha a config Firebase completa (apiKey, projectId, authDomain, appId, etc).'); return } try{ localStorage.setItem('mcalc_ws_id', JSON.stringify(wsId)); localStorage.setItem('mcalc_fb_cfg', document.getElementById('fbConfig')?.value||''); if(getApps().length){ app=getApps()[0] } else { app=initializeApp(cfg) } db=getFirestore(app); wsRef=doc(db,'workspaces',wsId); subscribe(); setStatus('Conectado ao espaço: '+wsId); }catch(e){ console.error(e); alert('Erro ao conectar ao Firebase: '+e.message); setStatus('Falha na conexão') } }
+    function disconnect(){ try{ if(unsub) unsub(); unsub=null }catch{} try{ if(app) deleteApp(app) }catch{} app=null; db=null; wsRef=null; setStatus('Desconectado') }
     window.cloudScheduleSave=cloudScheduleSave; window.userEditingUntil = 0;
     const wsIdEl=document.getElementById('wsId'); const fbConfigEl=document.getElementById('fbConfig'); const btnConnect=document.getElementById('btnConnect'); const btnDisconnect=document.getElementById('btnDisconnect');
     btnConnect&&btnConnect.addEventListener('click', connect); btnDisconnect&&btnDisconnect.addEventListener('click', disconnect);
