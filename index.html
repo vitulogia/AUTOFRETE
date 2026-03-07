@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4j AutoSync (AutoConnect + Picker em caixas)</title>
-  <meta name="description" content="AutoConnect após inserir Espaço e Firebase JSON; picker simplificado só com nomes em caixas; slots com cor/texture do produto; mobile só rolagem vertical; lista de produtos abaixo; resultado colorido; proteção de foco ao digitar.">
+  <title>Calculadora de Pallets & Lucro de Frete — v2.3.4k AutoSync (ML fixa por peso×preço)</title>
+  <meta name="description" content="Taxa ML fixa calculada por tabela peso×preço (com teto 25% até R$ 29), AutoConnect, picker em caixas, mobile só vertical, slots com padrão do produto, resultado colorido e proteção de foco.">
   <style>
     :root{ --bg:#f6f7f9; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --primary:#0f172a; --primary-ink:#ffffff; --accent:#10b981; --danger:#ef4444; --danger-ink:#fff; --chip:#111827cc; }
     *{box-sizing:border-box}
@@ -25,7 +25,6 @@
 
     .pagegrid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}
 
-    /* Caminhão / Slots */
     .truck{position:relative;border-radius:24px;color:#fff;padding:16px;border:1px solid #0b1020;box-shadow:0 6px 24px rgba(2,6,23,.18);overflow-x:hidden;background:#0b1020}
     .slot{position:relative;aspect-ratio:1/1;border:2px dashed #4b5563;border-radius:12px;background:transparent;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;min-width:110px}
     .slot.filled{border-style:solid;border-color:#6ee7b7;}
@@ -43,7 +42,6 @@
 
     dialog{border:none;border-radius:16px;box-shadow:0 24px 48px rgba(2,6,23,.35)} dialog::backdrop{background:rgba(0,0,0,.45)}
 
-    /* Produtos */
     .prod-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
     .prod-controls{display:flex;flex-wrap:wrap;gap:8px}
     .product{border-bottom:1px solid var(--line);} 
@@ -59,12 +57,10 @@
     .stats .val{font-weight:700}
     #statFinal.profit{font-weight:800}
 
-    /* Picker: nomes em caixas, mais fácil de tocar */
     .pick-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
     .pick-box{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;color:#0f172a}
     .pick-box:hover{background:#f8fafc}
 
-    /* Mobile (vertical-only + produtos abaixo) */
     @media (max-width: 768px){
       .container{padding:12px}
       h1{font-size:18px}
@@ -85,8 +81,8 @@
       <div style="display:flex;gap:12px;align-items:center">
         <div class="logo">☁️</div>
         <div>
-          <h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4j)</h1>
-          <div class="sub">AutoConnect após inserir Espaço/JSON • Picker com nomes em caixas • Slots com cor/texture do produto • Mobile só vertical.</div>
+          <h1>Calculadora de Pallets & Lucro de Frete — AutoSync (v2.3.4k)</h1>
+          <div class="sub">Taxa ML fixa por <b>peso × preço</b> (teto 25% até R$29) • AutoConnect • Picker em caixas • Mobile só vertical.</div>
         </div>
       </div>
       <div class="header-actions">
@@ -169,7 +165,7 @@
         <div style="background:#f4f4f5;border-radius:12px;padding:6px 8px;color:#3f3f46;font-size:12px">🔗</div>
         <div>
           <div style="font-weight:700">Sincronização (Firebase)</div>
-          <div class="sub">Preencha uma vez por dispositivo. Conectaremos automaticamente quando os campos estiverem válidos.</div>
+          <div class="sub">AutoConnect: conectamos automaticamente quando Espaço e JSON forem válidos.</div>
         </div>
       </div>
       <div class="grid" style="grid-template-columns:1fr; gap:10px">
@@ -181,18 +177,11 @@
         <button class="btn" id="btnConnect">Conectar</button>
         <button class="btn secondary" data-close>Fechar</button>
       </div>
-      <div class="sub" style="margin-top:8px">Dica: guardamos os dados localmente para auto-conectar nas próximas visitas.</div>
+      <div class="sub" style="margin-top:8px">Guardamos localmente para auto-conectar nas próximas visitas.</div>
     </div>
   </dialog>
 
-  <!-- Modais: Novo veículo, Novo produto, Picker -->
-  <dialog id="dlgVehicle" class="modal"><div class="content" style="padding:16px 18px;min-width:360px"><div style="font-weight:700;margin-bottom:8px">Novo veículo</div><div class="grid" style="grid-template-columns:1fr 1fr; gap:10px">
-    <label><div class="sub">Nome do veículo</div><input id="vehName" class="input" placeholder="Ex.: Furgão, Carreta, etc."></label>
-    <label><div class="sub">Capacidade (nº de pallets)</div><input id="vehCap" class="input" type="number" min="1" step="1" value="2"></label>
-    <label><div class="sub">Limite de peso (kg) — 0 = sem limite</div><input id="vehLimit" class="input" type="number" min="0" step="1" value="0"></label>
-    <div class="badge">A grade é ajustada automaticamente (linhas × colunas).</div>
-  </div><div class="footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn secondary" data-close>Cancelar</button><button class="btn" id="vehAdd">Adicionar veículo</button></div></div></dialog>
-
+  <!-- Modais: Novo produto, Picker -->
   <dialog id="dlgProduct" class="modal"><div class="content" style="padding:16px 18px;min-width:360px"><div style="font-weight:700;margin-bottom:8px">Novo produto</div>
     <div class="grid" style="grid-template-columns:1fr 1fr; gap:10px">
       <label class="col"><div class="sub">Nome</div><input id="prodName" class="input" placeholder="Ex.: Água Mineral 1,5L"></label>
@@ -203,7 +192,7 @@
       <label><div class="sub">Taxa % ML (por produto)</div><input id="prodMlPct" class="input" type="number" min="0" step="0.1" placeholder="14"></label>
     </div>
     <div class="footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn secondary" data-close>Cancelar</button><button class="btn" id="prodAdd">Adicionar produto</button></div>
-  </dialog>
+  </div></dialog>
 
   <dialog id="dlgPicker" class="modal"><div class="content" style="padding:16px 18px;min-width:420px">
     <div class="picker-head" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -219,7 +208,6 @@
     </div>
   </div></dialog>
 
-  <!-- App base + Padrões + AutoConnect + Picker simplificado + Proteção de foco -->
   <script>
     const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>Array.from(e.querySelectorAll(s));
     const brl=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number.isFinite(v)?v:0);
@@ -229,32 +217,72 @@
     function uid(p='id'){return p+'_'+Math.random().toString(36).slice(2,9)}
     function bestGrid(cap){ if(cap<=0)return{rows:1,cols:1}; let best={rows:1,cols:cap},bd=cap-1; for(let r=1;r<=Math.sqrt(cap);r++){ if(cap%r===0){ const c=Math.ceil(cap/r),d=Math.abs(c-r); if(d<bd){best={rows:r,cols:c};bd=d} } } if(best.rows*best.cols!==cap){ const rows=Math.floor(Math.sqrt(cap)), cols=Math.ceil(cap/rows); best={rows,cols} } return best }
 
-    // Cores/texturas por produto
-    const BASE_COLORS=['#2563eb','#059669','#f59e0b','#ef4444','#7c3aed','#0ea5e9','#10b981','#f97316','#dc2626','#a855f7'];
-    function colorFor(p){ return BASE_COLORS[Math.abs(p.colorIdx||0)%BASE_COLORS.length] }
-    function patternFor(idx, col){ const k=idx%4; const c=col; switch(k){
-      case 0: return { bgColor: c+'10', bgImage: `repeating-linear-gradient(45deg, ${c}22 0 8px, ${c}44 8px 16px)` };
-      case 1: return { bgColor: c+'10', bgImage: `repeating-linear-gradient(-45deg, ${c}22 0 8px, ${c}44 8px 16px)` };
-      case 2: return { bgColor: c+'0d', bgImage: `repeating-linear-gradient(0deg, ${c}22 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, ${c}22 0 6px, transparent 6px 12px)` };
-      default: return { bgColor: c+'10', bgImage: `radial-gradient(${c}33 1.5px, transparent 1.5px)`, bgSize:'8px 8px', bgPos:'0 0' };
-    }}
+    // Tabela ML fixa (peso × preço). Preços em BRL, pesos em kg
+    const PRICE_BRACKETS=[
+      {max:18.99}, {max:28.99}, {max:48.99}, {max:78.99}, {max:98.99}, {max:198.99}, {max:Infinity}
+    ];
+    // Para cada faixa de peso, um vetor de 7 valores (na ordem dos PRICE_BRACKETS)
+    const ML_FIXED_TABLE=[
+      {label:'Até 0,3 kg', max:0.3, vals:[1.25,1.50,2.00,3.00,4.00,6.00,20.95]},
+      {label:'0,3–0,5 kg', min:0.3, max:0.5, vals:[1.25,1.50,2.00,3.00,4.00,6.00,22.55]},
+      {label:'0,5–1 kg',   min:0.5, max:1.0, vals:[1.25,1.50,2.00,3.00,4.00,6.00,23.65]},
+      {label:'1–2 kg',     min:1.0, max:2.0, vals:[1.75,2.00,2.50,3.50,4.50,6.50,24.65]},
+      {label:'2–3 kg',     min:2.0, max:3.0, vals:[2.00,2.50,3.00,4.00,5.00,7.00,26.25]},
+      {label:'3–4 kg',     min:3.0, max:4.0, vals:[2.00,2.50,3.00,4.00,5.00,7.00,28.35]},
+      {label:'4–5 kg',     min:4.0, max:5.0, vals:[2.50,3.50,4.00,5.00,6.00,7.50,30.75]},
+      {label:'5–6 kg',     min:5.0, max:6.0, vals:[2.50,3.50,4.00,5.00,6.00,7.50,39.75]},
+      {label:'6–7 kg',     min:6.0, max:7.0, vals:[4.00,5.00,5.50,6.50,7.00,7.50,44.05]},
+      {label:'7–8 kg',     min:7.0, max:8.0, vals:[4.00,5.00,5.50,6.50,7.00,7.50,48.05]},
+      {label:'8–9 kg',     min:8.0, max:9.0, vals:[5.00,6.00,6.50,7.00,7.50,8.00,49.35]},
+      {label:'9–11 kg',    min:9.0, max:11.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,68.65]},
+      {label:'11–13 kg',   min:11.0,max:13.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,70.25]},
+      {label:'13–15 kg',   min:13.0,max:15.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,74.95]},
+      {label:'15–17 kg',   min:15.0,max:17.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,78.65]},
+      {label:'17–20 kg',   min:17.0,max:20.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,91.15]},
+      {label:'20–25 kg',   min:20.0,max:25.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,105.95]},
+      {label:'25–30 kg',   min:25.0,max:30.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,106.95]},
+      {label:'30–40 kg',   min:30.0,max:40.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,107.05]},
+      {label:'40–50 kg',   min:40.0,max:50.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,110.75]},
+      {label:'50–60 kg',   min:50.0,max:60.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,118.15]},
+      {label:'60–70 kg',   min:60.0,max:70.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,126.55]},
+      {label:'70–80 kg',   min:70.0,max:80.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,132.25]},
+      {label:'80–90 kg',   min:80.0,max:90.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,146.95]},
+      {label:'90–100 kg',  min:90.0,max:100.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,167.95]},
+      {label:'100–125 kg', min:100.0,max:125.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,187.95]},
+      {label:'125–150 kg', min:125.0,max:150.0,vals:[5.00,6.00,6.50,7.00,7.50,8.00,199.45]},
+      {label:'>150 kg',    min:150.0,max:Infinity,vals:[5.00,6.00,6.50,7.00,7.50,8.00,261.95]},
+    ];
 
-    function fixedML(sale){ const s=toNum(sale); if(s>198.99)return 0; if(s>99.99)return 6; if(s>49.99)return 4; if(s>29.99)return 2; if(s>7.99)return 1; return 0 }
+    function priceIdx(sale){ for(let i=0;i<PRICE_BRACKETS.length;i++){ if(sale<=PRICE_BRACKETS[i].max) return i } return PRICE_BRACKETS.length-1 }
+    function weightRowIdx(kg){ const w = Math.max(0, toNum(kg)); for(let i=0;i<ML_FIXED_TABLE.length;i++){ const r=ML_FIXED_TABLE[i]; const min = r.min ?? -Infinity; const max = r.max ?? Infinity; // Regra: (w <= max) e (i==0? w<=max : w>min && w<=max)
+        if(i===0){ if(w<=max) return i } else { if(w>min && w<=max) return i }
+      } return ML_FIXED_TABLE.length-1 }
+
+    function mlFixedFee(sale, unitWeightKg){
+      const s = clamp(toNum(sale)); const idxP = priceIdx(s); const idxW = weightRowIdx(unitWeightKg);
+      let fee = ML_FIXED_TABLE[idxW].vals[idxP] || 0;
+      // Teto para produtos com preço < 29: no máximo 25% do preço
+      if(s < 29){ fee = Math.min(fee, s*0.25) }
+      return fee;
+    }
+
+    function fixedML(sale){ // legado (não usado)
+      const s=toNum(sale); if(s>198.99)return 0; if(s>99.99)return 6; if(s>49.99)return 4; if(s>29.99)return 2; if(s>7.99)return 1; return 0
+    }
+
     function computeProduct(p,taxPercent){
       const mlPercent=clamp(toNum(p.mlPercent));
       const sale=clamp(toNum(p.salePrice));
       const buy=clamp(toNum(p.buyPrice));
       const units=clamp(toNum(p.unitsPerPallet),1);
-      const fixed=fixedML(sale);
+      const fixed=mlFixedFee(sale, p.unitWeightKg); // NOVO: taxa fixa por peso×preço
       const mlPctVal=sale*mlPercent/100;
       const taxVal=sale*clamp(toNum(taxPercent))/100;
       const profitUnit=sale-buy-fixed-mlPctVal-taxVal;
       const profitPallet=profitUnit*units;
       const palletWeightKg=clamp(toNum(p.unitWeightKg))*units;
-      const revenueUnit=sale;
-      const revenuePallet=sale*units;
-      const marginUnitPct=sale>0? (profitUnit/sale)*100 : 0;
-      const marginPalletPct=revenuePallet>0? (profitPallet/revenuePallet)*100 : 0;
+      const revenueUnit=sale; const revenuePallet=sale*units;
+      const marginUnitPct=sale>0? (profitUnit/sale)*100 : 0; const marginPalletPct=revenuePallet>0? (profitPallet/revenuePallet)*100 : 0;
       return {sale,buy,fixed,mlPctVal,taxVal,profitUnit,profitPallet,palletWeightKg,mlPercent,revenueUnit,revenuePallet,marginUnitPct,marginPalletPct}
     }
 
@@ -271,28 +299,23 @@
 
     const selVehicle=$('#selVehicle'), vehMaxWeight=$('#vehMaxWeight'), truckWrap=$('#truckWrap'), productsEl=$('#products');
     const statProfit=$('#statProfit'), statWeight=$('#statWeight'), statFreight=$('#statFreight'), statFinal=$('#statFinal'), statCost=$('#statCost'), statMargin=$('#statMargin');
-    const sortByEl = $('#prodSortBy'); const sortDirEl = $('#prodSortDir'); const filterPosEl = $('#filterPos'); const filterNegEl = $('#filterNeg');
     const productRows={};
 
     let pickerSlotIndex = null; let userEditingUntil = 0; function markEditing(){ userEditingUntil = Date.now() + 1200; }
 
     function initControls(){
-      // Sincronização - abrir modal
       $('#btnOpenSync')?.addEventListener('click',()=>{ syncFillFields(); $('#dlgSync').showModal(); });
       $$('#dlgSync [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgSync').close()));
 
       $('#btnClearLoad') && $('#btnClearLoad').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; ensureLayout(v); state.layouts[v.id]=Array(v.capacity).fill(null); persist(); renderTruck(); renderTotals(); });
       $('#btnDeleteVehicle') && $('#btnDeleteVehicle').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; state.vehicles=state.vehicles.filter(x=>x.id!==v.id); delete state.layouts[v.id]; state.selectedVehicleId=(state.vehicles[0]&&state.vehicles[0].id)||null; persist(); renderVehicles(); renderTruck(); renderTotals(); });
-      const openVeh=()=>$('#dlgVehicle').showModal(); $('#btnQuickNewVehicle')&&$('#btnQuickNewVehicle').addEventListener('click',openVeh);
-      $('#btnNewProduct')&&$('#btnNewProduct').addEventListener('click',()=>$('#dlgProduct').showModal()); $('#btnNewProduct2')&&$('#btnNewProduct2').addEventListener('click',()=>$('#dlgProduct').showModal());
-      $$('#dlgVehicle [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgVehicle').close())); $$('#dlgProduct [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgProduct').close()));
-      $('#vehAdd')&&$('#vehAdd').addEventListener('click',()=>{ const name=$('#vehName').value.trim()||undefined; const cap=Math.max(1,Math.floor(toNum($('#vehCap').value)||1)); const limit=Math.max(0,Math.floor(toNum($('#vehLimit').value)||0)); const grid=bestGrid(cap); const veh={id:uid('veh'),name:name||`Veículo (${cap} pallets)`,capacity:cap,rows:grid.rows,cols:grid.cols,createdAt:Date.now(),maxWeightKg:limit}; state.vehicles.push(veh); state.selectedVehicleId=veh.id; ensureLayout(veh); $('#vehName').value=''; $('#vehCap').value='2'; $('#vehLimit').value='0'; persist(); renderVehicles(); renderTruck(); renderTotals(); $('#dlgVehicle').close(); });
-      $('#prodAdd')&&$('#prodAdd').addEventListener('click',()=>{ const prod={ id:uid('prod'), name:$('#prodName').value.trim()||'Produto novo', buyPrice:toNum($('#prodBuy').value), salePrice:toNum($('#prodSale').value), unitsPerPallet:Math.max(1,Math.floor(toNum($('#prodUnits').value)||1)), unitWeightKg:toNum($('#prodWeight').value), colorIdx:Math.floor(Math.random()*BASE_COLORS.length), mlPercent:toNum($('#prodMlPct').value)||14 }; state.products.push(prod); $('#prodName').value=''; $('#prodBuy').value=''; $('#prodSale').value=''; $('#prodUnits').value=''; $('#prodWeight').value=''; $('#prodMlPct').value=''; persist(); renderProducts(); renderTotals(); renderTruck(); $('#dlgProduct').close(); });
+      const openVeh=()=>$('#dlgProduct').showModal(); $('#btnNewProduct')&&$('#btnNewProduct').addEventListener('click',openVeh); $('#btnNewProduct2')&&$('#btnNewProduct2').addEventListener('click',openVeh);
+      $$('#dlgProduct [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgProduct').close()));
 
-      if(sortByEl) sortByEl.addEventListener('change', ()=> renderProducts());
-      if(sortDirEl) sortDirEl.addEventListener('change', ()=> renderProducts());
-      if(filterPosEl) filterPosEl.addEventListener('change', ()=> renderProducts());
-      if(filterNegEl) filterNegEl.addEventListener('change', ()=> renderProducts());
+      $('#prodAdd')&&$('#prodAdd').addEventListener('click',()=>{ const prod={ id:uid('prod'), name:$('#prodName').value.trim()||'Produto novo', buyPrice:toNum($('#prodBuy').value), salePrice:toNum($('#prodSale').value), unitsPerPallet:Math.max(1,Math.floor(toNum($('#prodUnits').value)||1)), unitWeightKg:toNum($('#prodWeight').value), colorIdx:Math.floor(Math.random()*10), mlPercent:toNum($('#prodMlPct').value)||14 }; state.products.push(prod); $('#prodName').value=''; $('#prodBuy').value=''; $('#prodSale').value=''; $('#prodUnits').value=''; $('#prodWeight').value=''; $('#prodMlPct').value=''; persist(); renderProducts(); renderTotals(); renderTruck(); $('#dlgProduct').close(); });
+
+      const sortByEl=$('#prodSortBy'); const sortDirEl=$('#prodSortDir'); const filterPosEl=$('#filterPos'); const filterNegEl=$('#filterNeg');
+      if(sortByEl) sortByEl.addEventListener('change', ()=> renderProducts()); if(sortDirEl) sortDirEl.addEventListener('change', ()=> renderProducts()); if(filterPosEl) filterPosEl.addEventListener('change', ()=> renderProducts()); if(filterNegEl) filterNegEl.addEventListener('change', ()=> renderProducts());
     }
 
     function ensureLayout(v){ if(!state.layouts[v.id] || state.layouts[v.id].length!==v.capacity){ state.layouts[v.id]=Array(v.capacity).fill(null) } }
@@ -303,41 +326,34 @@
     function renderVehicles(){ const sel=selVehicle; sel.innerHTML=''; state.vehicles.forEach(v=>{ const o=document.createElement('option'); o.value=v.id; o.textContent=`${v.name} — ${v.capacity} pallets`; sel.appendChild(o) }); if(state.vehicles.length){ const ok=state.vehicles.some(v=>v.id===state.selectedVehicleId); if(!ok) state.selectedVehicleId=state.vehicles[0].id; sel.value=state.selectedVehicleId } sel.onchange=()=>{ state.selectedVehicleId=sel.value; persist(); renderTruck(); renderTotals(); syncVehLimitInput(); }; syncVehLimitInput(); }
     function syncVehLimitInput(){ const v=getSelectedVehicle(); if(!v){ vehMaxWeight.value=0; return } vehMaxWeight.value=v.maxWeightKg||0; vehMaxWeight.oninput=()=>{ v.maxWeightKg=Math.max(0,Math.floor(toNum(vehMaxWeight.value)||0)); persist(); renderTotals(); } }
 
-    function renderPickerList(){ const list=$('#pickerList'); if(!list)return; list.innerHTML=''; const v=getSelectedVehicle(); const deaccent=(s)=> (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=deaccent(($('#pickerSearch')?.value||'')).toLowerCase().trim(); let count=0; state.products.forEach(p=>{ const nameNorm=deaccent(p.name).toLowerCase(); if(q && !nameNorm.includes(q)) return; const c=computeProduct(p,state.taxPercent); const item=document.createElement('div'); item.className='pick-box'; item.textContent=p.name; item.addEventListener('click',()=>{ if(pickerSlotIndex==null)return; const layout=state.layouts[v.id]; const totals=vehicleTotals(v); const next=totals.totalWeight+c.palletWeightKg; if(v.maxWeightKg>0 && next>v.maxWeightKg){ alert('Não é possível adicionar: limite de peso do veículo seria excedido.'); return } layout[pickerSlotIndex]=p.id; persist(); renderTruck(); renderTotals(); $('#dlgPicker').close(); }); list.appendChild(item); count++; }); $('#pickerCount').textContent=`${count} produto(s)`; if(count===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto encontrado.'; list.appendChild(empty) } }
+    function renderPickerList(){ const list=$('#pickerList'); if(!list)return; list.innerHTML=''; const v=getSelectedVehicle(); const deaccent=(s)=> (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); const q=deaccent(($('#pickerSearch')?.value||'')).toLowerCase().trim(); let count=0; state.products.forEach(p=>{ const nameNorm=deaccent(p.name).toLowerCase(); if(q && !nameNorm.includes(q)) return; const item=document.createElement('div'); item.className='pick-box'; item.textContent=p.name; item.addEventListener('click',()=>{ if(pickerSlotIndex==null)return; const layout=state.layouts[v.id]; layout[pickerSlotIndex]=p.id; persist(); renderTruck(); renderTotals(); $('#dlgPicker').close(); }); list.appendChild(item); count++; }); $('#pickerCount').textContent=`${count} produto(s)`; if(count===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto encontrado.'; list.appendChild(empty) } }
 
     function renderTruck(){ const v=getSelectedVehicle(); if(!v){ truckWrap.innerHTML='<div class="badge">Nenhum veículo cadastrado.</div>'; return } ensureLayout(v); const layout=state.layouts[v.id]; let slotsHTML='';
       for(let i=0;i<layout.length;i++){
         const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner=''; let style='';
-        if(filled){ const c=computeProduct(prod,state.taxPercent); const pcls=c.profitPallet>0?'good':(c.profitPallet<0?'bad':''); const col=colorFor(prod); const pat=patternFor(prod.colorIdx||0,col); const extra=(pat.bgSize?`background-size:${pat.bgSize};`:'')+(pat.bgPos?`background-position:${pat.bgPos};`:''); style=`background-color:${pat.bgColor}; background-image:${pat.bgImage}; ${extra}`;
+        if(filled){ const c=computeProduct(prod,state.taxPercent); const pcls=c.profitPallet>0?'good':(c.profitPallet<0?'bad':''); const col=['#2563eb','#059669','#f59e0b','#ef4444','#7c3aed','#0ea5e9','#10b981','#f97316','#dc2626','#a855f7'][Math.abs(prod.colorIdx||0)%10]; const pat=(function(idx,col){ const k=idx%4; const c=col; switch(k){ case 0: return { bgColor: c+'10', bgImage: `repeating-linear-gradient(45deg, ${c}22 0 8px, ${c}44 8px 16px)` }; case 1: return { bgColor: c+'10', bgImage: `repeating-linear-gradient(-45deg, ${c}22 0 8px, ${c}44 8px 16px)` }; case 2: return { bgColor: c+'0d', bgImage: `repeating-linear-gradient(0deg, ${c}22 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, ${c}22 0 6px, transparent 6px 12px)` }; default: return { bgColor: c+'10', bgImage: `radial-gradient(${c}33 1.5px, transparent 1.5px)`, bgSize:'8px 8px', bgPos:'0 0' }; } })(prod.colorIdx||0,col); const extra=(pat.bgSize?`background-size:${pat.bgSize};`:'')+(pat.bgPos?`background-position:${pat.bgPos};`:''); style=`background-color:${pat.bgColor}; background-image:${pat.bgImage}; ${extra}`;
           inner = `
-            <button class="remove" title="Remover pallet" aria-label="Remover pallet" data-remove="${i}"><span class="x">×</span></button>
-            <div class="slotlines">
-              <div class="name">${prod.name}</div>
-              <div class="weight">⚖️ ${kgFmt(c.palletWeightKg)}</div>
-              <div class="profit ${pcls}">💰 ${brl(c.profitPallet)}</div>
+            <button class=\"remove\" title=\"Remover pallet\" aria-label=\"Remover pallet\" data-remove=\"${i}\"><span class=\"x\">×</span></button>
+            <div class=\"slotlines\">
+              <div class=\"name\">${prod.name}</div>
+              <div class=\"weight\">⚖️ ${kgFmt(c.palletWeightKg)}</div>
+              <div class=\"profit ${pcls}\">💰 ${brl(c.profitPallet)}</div>
             </div>`;
         } else {
           inner = '<div class="badge" style="color:#94a3b8">Clique para adicionar</div>';
         }
         slotsHTML += `<div class="slot ${filled?'filled':''}" data-slot="${i}" style="${style}"><div style="position:relative;z-index:2;text-align:center">${inner}</div></div>`;
       }
-      truckWrap.innerHTML = `<div class="truck">
-        <div class="slots" style="display:grid;gap:8px;grid-template-columns:repeat(${getSelectedVehicle().cols}, minmax(110px, 1fr));">${slotsHTML}</div>
-      </div>`;
+      truckWrap.innerHTML = `<div class="truck"><div class="slots" style="display:grid;gap:8px;grid-template-columns:repeat(${getSelectedVehicle().cols}, minmax(110px, 1fr));">${slotsHTML}</div></div>`;
       $$('.slot',truckWrap).forEach(el=>{ if(!el.classList.contains('filled')){ el.addEventListener('click',()=>{ const idx=Number(el.dataset.slot); pickerSlotIndex=idx; $('#dlgPicker').showModal(); renderPickerList(); }); }});
       $$('button[data-remove]',truckWrap).forEach(btn=>btn.addEventListener('click',()=>{ const idx=Number(btn.getAttribute('data-remove')); layout[idx]=null; persist(); renderTruck(); renderTotals(); }))
     }
 
-    function updateProductRowUI(p, row){
-      if(!row) return; const c=computeProduct(p,state.taxPercent); const col=colorFor(p); const pat=patternFor(p.colorIdx||0, col);
-      const sw=row.querySelector('.swatch'); if(sw){ const extra=(pat.bgSize?`background-size:${pat.bgSize};`:'')+(pat.bgPos?`background-position:${pat.bgPos};`:''); sw.style.backgroundColor=pat.bgColor; sw.style.backgroundImage=pat.bgImage; sw.style.cssText += ';'+extra; sw.style.borderColor=col }
-      const hdrUnit=row.querySelector('[data-fin="profitUnit"]'); const hdrPallet=row.querySelector('[data-fin="profitPallet"]');
-      if(hdrUnit){ hdrUnit.textContent=brl(c.profitUnit); hdrUnit.classList.remove('good','bad'); hdrUnit.classList.add('profit', c.profitUnit>0?'good':(c.profitUnit<0?'bad':null)); }
-      if(hdrPallet){ hdrPallet.textContent=brl(c.profitPallet); hdrPallet.classList.remove('good','bad'); hdrPallet.classList.add('profit', c.profitPallet>0?'good':(c.profitPallet<0?'bad':null)); }
+    function updateProductRowUI(p, row){ if(!row) return; const c=computeProduct(p,state.taxPercent); const hdrUnit=row.querySelector('[data-fin="profitUnit"]'); const hdrPallet=row.querySelector('[data-fin="profitPallet"]'); if(hdrUnit){ hdrUnit.textContent=brl(c.profitUnit); hdrUnit.classList.remove('good','bad'); hdrUnit.classList.add('profit', c.profitUnit>0?'good':(c.profitUnit<0?'bad':null)); } if(hdrPallet){ hdrPallet.textContent=brl(c.profitPallet); hdrPallet.classList.remove('good','bad'); hdrPallet.classList.add('profit', c.profitPallet>0?'good':(c.profitPallet<0?'bad':null)); }
       const map={ profitUnit:c.profitUnit, profitPallet:c.profitPallet, tax:c.taxVal, mlpct:c.mlPctVal, mlfixed:c.fixed, mltotal:c.mlPctVal+c.fixed, taxPct:`${(state.taxPercent||0).toLocaleString('pt-BR')}%`, mlPctNum:`${(c.mlPercent||0).toLocaleString('pt-BR')}%`, mUnit:pctFmt(c.marginUnitPct), mPallet:pctFmt(c.marginPalletPct) };
-      Object.entries(map).forEach(([k,val])=>{ row.querySelectorAll(`[data-fin="${k}"]`).forEach(el=>{ if(k==='profitUnit'||k==='profitPallet'){ el.textContent=brl(val); el.classList.remove('good','bad'); el.classList.add('profit', val>0?'good':(val<0?'bad':null)); } else { el.textContent=typeof val==='number'?brl(val):val } }) });
-    }
-    function renderProducts(){ productsEl.innerHTML=''; for(const k in productRows) delete productRows[k]; if(!Array.isArray(state.products)) state.products=[]; const items=state.products.map(p=>{ const c=computeProduct(p,state.taxPercent); return {p,c}; }); const wantPos=!!($('#filterPos')&&$('#filterPos').checked); const wantNeg=!!($('#filterNeg')&&$('#filterNeg').checked); const filtered=items.filter(({c})=>{ if(!wantPos && !wantNeg) return true; if(wantPos && !wantNeg) return c.profitPallet>=0; if(!wantPos && wantNeg) return c.profitPallet<0; return true; }); const key=$('#prodSortBy')?$('#prodSortBy').value:'name'; const dir=(($('#prodSortDir')?$('#prodSortDir').value:'asc')==='asc')?1:-1; filtered.sort((a,b)=>{ let va,vb; switch(key){ case 'profitUnit': va=a.c.profitUnit; vb=b.c.profitUnit; break; case 'profitPallet': va=a.c.profitPallet; vb=b.c.profitPallet; break; case 'weightPallet': va=a.c.palletWeightKg; vb=b.c.palletWeightKg; break; case 'sale': va=a.c.sale; vb=b.c.sale; break; default: va=(a.p.name||'').toLowerCase(); vb=(b.p.name||'').toLowerCase(); } if(va<vb) return -1*dir; if(va>vb) return 1*dir; return 0; }); filtered.forEach(({p,c})=>{ const row=document.createElement('div'); row.className='product'+(state.expanded[p.id]?' open':''); row.dataset.id=p.id; row.innerHTML=`
+      Object.entries(map).forEach(([k,val])=>{ row.querySelectorAll(`[data-fin="${k}"]`).forEach(el=>{ if(k==='profitUnit'||k==='profitPallet'){ el.textContent=brl(val); el.classList.remove('good','bad'); el.classList.add('profit', val>0?'good':(val<0?'bad':null)); } else { el.textContent=typeof val==='number'?brl(val):val } }) }); }
+
+    function renderProducts(){ const productsEl=$('#products'); productsEl.innerHTML=''; for(const k in productRows) delete productRows[k]; if(!Array.isArray(state.products)) state.products=[]; const sortByEl=$('#prodSortBy'); const sortDirEl=$('#prodSortDir'); const filterPosEl=$('#filterPos'); const filterNegEl=$('#filterNeg'); const items=state.products.map(p=>({p,c:computeProduct(p,state.taxPercent)})); const wantPos=!!(filterPosEl&&filterPosEl.checked); const wantNeg=!!(filterNegEl&&filterNegEl.checked); const filtered=items.filter(({c})=>{ if(!wantPos && !wantNeg) return true; if(wantPos && !wantNeg) return c.profitPallet>=0; if(!wantPos && wantNeg) return c.profitPallet<0; return true; }); const key=sortByEl?sortByEl.value:'name'; const dir=(sortDirEl?sortDirEl.value:'asc')==='asc'?1:-1; filtered.sort((a,b)=>{ let va,vb; switch(key){ case 'profitUnit': va=a.c.profitUnit; vb=b.c.profitUnit; break; case 'profitPallet': va=a.c.profitPallet; vb=b.c.profitPallet; break; case 'weightPallet': va=a.c.palletWeightKg; vb=b.c.palletWeightKg; break; case 'sale': va=a.c.sale; vb=b.c.sale; break; default: va=(a.p.name||'').toLowerCase(); vb=(b.p.name||'').toLowerCase(); } if(va<vb) return -1*dir; if(va>vb) return 1*dir; return 0; }); filtered.forEach(({p,c})=>{ const row=document.createElement('div'); row.className='product'+(state.expanded[p.id]?' open':''); row.dataset.id=p.id; row.innerHTML=`
           <div class="row1" data-toggle>
             <div class="swatch"></div>
             <div style="flex:1;min-width:0">
@@ -369,72 +385,31 @@
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn danger" title="Excluir">🗑 Excluir produto</button></div>
           </div>`;
-        productRows[p.id]=row;
-        row.querySelector('[data-toggle]').addEventListener('click',(e)=>{ if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') });
-        const delBtn=row.querySelector('button[title="Excluir"]'); if(delBtn) delBtn.addEventListener('click',()=>{ state.products=state.products.filter(x=>x.id!==p.id); Object.keys(state.layouts).forEach(vid=>{ state.layouts[vid]=(state.layouts[vid]||[]).map(x=>x===p.id?null:x) }); persist(); renderProducts(); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ markEditing(); p.buyPrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ markEditing(); p.salePrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ markEditing(); p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ markEditing(); p.unitWeightKg=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
-        row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ markEditing(); p.mlPercent=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); });
-        updateProductRowUI(p,row);
-        productsEl.appendChild(row);
-      });
-      if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) }
-    }
+        productRows[p.id]=row; row.querySelector('[data-toggle]').addEventListener('click',(e)=>{ if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') }); const delBtn=row.querySelector('button[title="Excluir"]'); if(delBtn) delBtn.addEventListener('click',()=>{ state.products=state.products.filter(x=>x.id!==p.id); Object.keys(state.layouts).forEach(vid=>{ state.layouts[vid]=(state.layouts[vid]||[]).map(x=>x===p.id?null:x) }); persist(); renderProducts(); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="buy"]').addEventListener('input',e=>{ markEditing(); p.buyPrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="sale"]').addEventListener('input',e=>{ markEditing(); p.salePrice=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="units"]').addEventListener('input',e=>{ markEditing(); p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="weight"]').addEventListener('input',e=>{ markEditing(); p.unitWeightKg=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); row.querySelector('[data-edit="mlpct"]').addEventListener('input',e=>{ markEditing(); p.mlPercent=toNum(e.target.value); persist(); updateProductRowUI(p,row); renderTotals(); renderTruck(); }); updateProductRowUI(p,row); productsEl.appendChild(row); }); if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) } }
 
     function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`${kgFmt(0)} • ${tonFmt(0)}`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); if(statCost) statCost.textContent=brl(0); if(statMargin) statMargin.textContent=pctFmt(0); return } const { totalProfit, totalWeight, totalCost, totalRevenue } = vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${kgFmt(totalWeight)} de ${kgFmt(limit)} • ${tonFmt(totalWeight/1000)}`:`${kgFmt(totalWeight)} • ${tonFmt(totalWeight/1000)}`; statWeight.style.color=exceeded?'#dc2626':''; if(statCost) statCost.textContent=brl(totalCost); statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.classList.remove('good','bad'); statFinal.classList.add('profit', final>=0?'good':'bad'); if(statMargin){ const marginTotalPct = totalRevenue>0 ? (totalProfit/totalRevenue)*100 : 0; statMargin.textContent=pctFmt(marginTotalPct); statMargin.style.color=marginTotalPct>=0?'#22c55e':'#ef4444'; } }
 
-    /* ----------------- Firebase AutoSync com AutoConnect ----------------- */
+    // ----------------- AutoConnect Firebase -----------------
     let app=null, db=null, unsub=null, wsRef=null, isApplyingRemote=false, saveT=null, lastRemoteStamp=0, autoConnT=null;
-    const syncStatusEl=$('#syncStatus');
-    function setStatus(txt){ if(syncStatusEl) syncStatusEl.textContent=txt }
+    function setStatus(txt){ const el=$('#syncStatus'); if(el) el.textContent=txt }
     function localSnapshot(){ return { taxPercent: state.taxPercent, freight: state.freight, products: state.products, vehicles: state.vehicles, layouts: state.layouts, selectedVehicleId: state.selectedVehicleId, expanded: state.expanded||{}, updatedAt: Date.now() } }
     async function cloudSaveNow(){ if(!wsRef) return; try{ const { setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js'); await setDoc(wsRef, localSnapshot(), { merge:true }) }catch(e){ console.warn('Falha ao salvar na nuvem:', e?.message) } }
     function cloudScheduleSave(){ if(!wsRef||isApplyingRemote) return; clearTimeout(saveT); saveT=setTimeout(cloudSaveNow, 350) }
     function applyRemote(data){ if(window.userEditingUntil && Date.now() < window.userEditingUntil) return; isApplyingRemote=true; try{ if((data.updatedAt||0)<=lastRemoteStamp) return; lastRemoteStamp=data.updatedAt||Date.now(); state.taxPercent=data.taxPercent??state.taxPercent; state.freight=data.freight??state.freight; state.products=Array.isArray(data.products)?data.products:state.products; state.vehicles=Array.isArray(data.vehicles)?data.vehicles:state.vehicles; state.layouts=(data.layouts!==undefined)?data.layouts:state.layouts; state.selectedVehicleId=data.selectedVehicleId??state.selectedVehicleId; state.expanded=data.expanded||{}; persist(); renderVehicles(); renderTruck(); renderProducts(); renderTotals(); } finally { isApplyingRemote=false } }
 
     function syncFillFields(){ const wsJSON=localStorage.getItem('mcalc_ws_id'); const cfgStr=localStorage.getItem('mcalc_fb_cfg'); try{ $('#wsId').value = wsJSON?JSON.parse(wsJSON):'' }catch{ $('#wsId').value='' } $('#fbConfig').value = cfgStr||''; bindAutoConnectInputs(); }
-
     function bindAutoConnectInputs(){ const ws=$('#wsId'), cfg=$('#fbConfig'); const debounced=()=>{ clearTimeout(autoConnT); autoConnT=setTimeout(()=>{ maybeAutoConnect(); }, 500) }; ws&&ws.addEventListener('input',debounced); cfg&&cfg.addEventListener('input',debounced); }
-
     function parseCfg(){ try{ const v=$('#fbConfig')?.value||''; const cfg=JSON.parse(v); if(cfg && cfg.apiKey && cfg.projectId && cfg.appId) return cfg; }catch{} return null }
 
-    async function connect(){
-      const wsId=(($('#wsId')?.value)||'').trim(); if(!wsId){ setStatus('Informe o espaço'); return }
-      const cfg=parseCfg(); if(!cfg){ setStatus('JSON Firebase incompleto'); return }
-      try{
-        localStorage.setItem('mcalc_ws_id', JSON.stringify(wsId)); localStorage.setItem('mcalc_fb_cfg', $('#fbConfig')?.value||'');
-        const { initializeApp, deleteApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-        const { getFirestore, doc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
-        if(getApps().length){ app=getApps()[0] } else { app=initializeApp(cfg) }
-        db=getFirestore(app); wsRef=doc(db,'workspaces',wsId);
-        if(unsub) unsub(); unsub=onSnapshot(wsRef,(snap)=>{ if(!snap.exists()){ cloudSaveNow(); return } applyRemote(snap.data()||{}); setStatus('Conectado ✓') }, (err)=>{ console.error(err); setStatus('Erro de sincronização') });
-        setStatus('Conectado ✓');
-        // Fecha modal se estiver aberto
-        const dlg=$('#dlgSync'); if(dlg && typeof dlg.close==='function') dlg.close();
-      }catch(e){ console.error(e); alert('Erro ao conectar ao Firebase: '+e.message); setStatus('Falha na conexão') }
-    }
-
+    async function connect(){ const wsId=(($('#wsId')?.value)||'').trim(); if(!wsId){ setStatus('Informe o espaço'); return } const cfg=parseCfg(); if(!cfg){ setStatus('JSON Firebase incompleto'); return } try{ localStorage.setItem('mcalc_ws_id', JSON.stringify(wsId)); localStorage.setItem('mcalc_fb_cfg', $('#fbConfig')?.value||''); const { initializeApp, deleteApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js'); const { getFirestore, doc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js'); if(getApps().length){ app=getApps()[0] } else { app=initializeApp(cfg) } db=getFirestore(app); wsRef=doc(db,'workspaces',wsId); if(unsub) unsub(); unsub=onSnapshot(wsRef,(snap)=>{ if(!snap.exists()){ cloudSaveNow(); return } applyRemote(snap.data()||{}); setStatus('Conectado ✓') }, (err)=>{ console.error(err); setStatus('Erro de sincronização') }); setStatus('Conectado ✓'); const dlg=$('#dlgSync'); if(dlg && typeof dlg.close==='function') dlg.close(); }catch(e){ console.error(e); alert('Erro ao conectar ao Firebase: '+e.message); setStatus('Falha na conexão') } }
     async function disconnect(){ try{ if(unsub) unsub(); unsub=null }catch{} try{ const { deleteApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js'); if(getApps().length){ await deleteApp(getApps()[0]) } }catch{} app=null; db=null; wsRef=null; setStatus('Desconectado') }
-
     function maybeAutoConnect(){ const wsId=(($('#wsId')?.value)||'').trim(); const cfg=parseCfg(); if(wsId && cfg){ connect(); } }
+    function autoOpenSyncIfNeeded(){ const wsJSON=localStorage.getItem('mcalc_ws_id'); const cfgStr=localStorage.getItem('mcalc_fb_cfg'); const hasWS = !!(wsJSON && JSON.parse(wsJSON||'""')); const hasCfg = !!(cfgStr && cfgStr.trim()); if(!hasWS || !hasCfg){ syncFillFields(); setTimeout(()=>{ $('#dlgSync').showModal(); }, 300) } else { syncFillFields(); maybeAutoConnect(); } }
 
-    function autoOpenSyncIfNeeded(){ const wsJSON=localStorage.getItem('mcalc_ws_id'); const cfgStr=localStorage.getItem('mcalc_fb_cfg'); const hasWS = !!(wsJSON && JSON.parse(wsJSON||'""')); const hasCfg = !!(cfgStr && cfgStr.trim()); if(!hasWS || !hasCfg){ syncFillFields(); setTimeout(()=>{ $('#dlgSync').showModal(); }, 300) } else { // AutoConnect ao carregar se já tem infos
-        syncFillFields(); maybeAutoConnect();
-      } }
-
-    // Bind sync buttons
-    window.addEventListener('DOMContentLoaded',()=>{
-      $('#btnConnect')?.addEventListener('click', async ()=>{ await connect(); });
-      $('#btnDisconnect')?.addEventListener('click', async ()=>{ await disconnect(); });
-    });
+    window.addEventListener('DOMContentLoaded',()=>{ $('#btnConnect')?.addEventListener('click', async ()=>{ await connect(); }); $('#btnDisconnect')?.addEventListener('click', async ()=>{ await disconnect(); }); });
 
     function render(){ renderVehicles(); renderTruck(); renderProducts(); renderTotals(); }
-
-    // Boot
-    if(typeof initControls==='function') initControls(); if(typeof render==='function') render();
-    autoOpenSyncIfNeeded();
+    if(typeof initControls==='function') initControls(); if(typeof render==='function') render(); autoOpenSyncIfNeeded();
   </script>
 </body>
 </html>
