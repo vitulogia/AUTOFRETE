@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Pallets & Lucro de Frete — v2.3.6 (Fretes salvos com pallets editáveis)</title>
-  <meta name="description" content="Fretes salvos como lista; ao abrir, editar por pallet apenas o Preço de venda e Taxa % ML; comparação Previsto × Realizado por pallet e total; ML fixa por peso×preço (teto 25% < R$29); AutoConnect; mobile vertical; picker em caixas; slots com padrão do produto; resultado colorido; proteção de foco.">
+  <title>Calculadora de Pallets & Lucro de Frete — v2.3.6a (Hotfix: lista de produtos restaurada)</title>
+  <meta name="description" content="Hotfix que restaura a lista de produtos na página principal; mantém fretes salvos com pallets editáveis (Preço de venda e Taxa % ML); comparação Previsto × Realizado por pallet e total; ML fixa por peso×preço (teto 25% < R$29); AutoConnect; mobile vertical; picker em caixas; slots com padrão do produto; resultado colorido; proteção de foco.">
   <style>
     :root{ --bg:#f6f7f9; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --primary:#0f172a; --primary-ink:#ffffff; --accent:#10b981; --danger:#ef4444; --danger-ink:#fff; --chip:#111827cc; --good:#16a34a; --bad:#dc2626; }
     *{box-sizing:border-box}
@@ -105,8 +105,8 @@
       <div style="display:flex;gap:12px;align-items:center">
         <div class="logo">☁️</div>
         <div>
-          <h1>Calculadora de Pallets & Lucro de Frete — v2.3.6</h1>
-          <div class="sub">Fretes salvos com <b>pallets editáveis</b> (Preço de venda e Taxa % ML) • Comparativo por pallet e total • AutoConnect • ML fixa por peso×preço (teto 25% &lt; R$29).</div>
+          <h1>Calculadora de Pallets & Lucro de Frete — v2.3.6a</h1>
+          <div class="sub">HOTFIX: lista de produtos restaurada na Operação • Fretes salvos com pallets editáveis • AutoConnect • ML fixa por peso×preço (teto 25% &lt; R$29).</div>
         </div>
       </div>
       <div class="header-actions">
@@ -211,7 +211,7 @@
 
   </div>
 
-  <!-- Modal: Novo produto -->
+  <!-- Modais -->
   <dialog id="dlgProduct" class="modal"><div class="content" style="padding:16px 18px;min-width:360px"><div style="font-weight:700;margin-bottom:8px">Novo produto</div>
     <div class="grid" style="grid-template-columns:1fr 1fr; gap:10px">
       <label class="col"><div class="sub">Nome</div><input id="prodName" class="input" placeholder="Ex.: Água Mineral 1,5L"></label>
@@ -224,7 +224,6 @@
     <div class="footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn secondary" data-close>Cancelar</button><button class="btn" id="prodAdd">Adicionar produto</button></div>
   </div></dialog>
 
-  <!-- Modal: Picker -->
   <dialog id="dlgPicker" class="modal"><div class="content" style="padding:16px 18px;min-width:420px">
     <div class="picker-head" style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
       <div style="background:#f4f4f5;border-radius:12px;padding:6px 8px;color:#3f3f46;font-size:12px">🔍</div>
@@ -239,7 +238,6 @@
     </div>
   </div></dialog>
 
-  <!-- Modal: Salvar frete -->
   <dialog id="dlgSaveFreight" class="modal"><div class="content" style="padding:16px 18px;min-width:380px">
     <div style="font-weight:700;margin-bottom:8px">Salvar frete</div>
     <div class="grid" style="grid-template-columns:1fr 1fr; gap:10px">
@@ -330,7 +328,7 @@
       layouts:store.get('mcalc_layouts',{}),
       selectedVehicleId:store.get('mcalc_selected_vehicle',null),
       expanded:store.get('mcalc_expanded',{}),
-      savedFreights:store.get('mcalc_saved_freights_v236',[]) // namespace novo para v2.3.6
+      savedFreights:store.get('mcalc_saved_freights_v236',[])
     };
     if(!Array.isArray(state.products)) state.products=[{id:uid('prod'),name:'Suco Laranja 1,7L',buyPrice:11.79,salePrice:19.90,unitsPerPallet:540,unitWeightKg:1.75,colorIdx:0,mlPercent:14}];
     if(!Array.isArray(state.vehicles)){
@@ -365,7 +363,6 @@
       for(let i=0;i<layout.length;i++){
         const pid=layout[i]; const prod=state.products.find(p=>p.id===pid); const filled=!!prod; let inner=''; let style='';
         if(filled){ const col=colorFor(prod); const pat=patternFor(prod.colorIdx||0,col); const extra=(pat.bgSize?`background-size:${pat.bgSize};`:'')+(pat.bgPos?`background-position:${pat.bgPos};`:''); style=`background-color:${pat.bgColor}; background-image:${pat.bgImage}; ${extra}`;
-          // compute pallet values just for display
           const u=computeUnit(prod.salePrice,prod.buyPrice,prod.mlPercent,prod.unitWeightKg,state.taxPercent); const units=clamp(toNum(prod.unitsPerPallet),1); const palletProfit=u.profitUnit*units; const palletWeight=clamp(toNum(prod.unitWeightKg))*units;
           inner = `
             <button class=\"remove\" title=\"Remover pallet\" aria-label=\"Remover pallet\" data-remove=\"${i}\"><span class=\"x\">×</span></button>
@@ -384,7 +381,18 @@
       $$('button[data-remove]',truckWrap).forEach(btn=>btn.addEventListener('click',()=>{ const idx=Number(btn.getAttribute('data-remove')); layout[idx]=null; persist(); renderTruck(); renderTotals(); }))
     }
 
-    function renderProducts(){ productsEl.innerHTML=''; const sortByEl=$('#prodSortBy'); const sortDirEl=$('#prodSortDir'); const filterPosEl=$('#filterPos'); const filterNegEl=$('#filterNeg'); const items=state.products.map(p=>({p,u:computeUnit(p.salePrice,p.buyPrice,p.mlPercent,p.unitWeightKg,state.taxPercent)})); const wantPos=!!(filterPosEl&&filterPosEl.checked); const wantNeg=!!(filterNegEl&&filterNegEl.checked); const filtered=items.filter(({u})=>{ const pp=u.profitUnit*clamp(toNum(p.unitsPerPallet),1); if(!wantPos && !wantNeg) return true; if(wantPos && !wantNeg) return pp>=0; if(!wantPos && wantNeg) return pp<0; return true; }); const key=sortByEl?sortByEl.value:'name'; const dir=(sortDirEl?sortDirEl.value:'asc')==='asc'?1:-1; filtered.sort((a,b)=>{ let va,vb; const A=a.p, B=b.p, Au=a.u, Bu=b.u; switch(key){ case 'profitUnit': va=Au.profitUnit; vb=Bu.profitUnit; break; case 'profitPallet': va=Au.profitUnit*clamp(toNum(A.unitsPerPallet),1); vb=Bu.profitUnit*clamp(toNum(B.unitsPerPallet),1); break; case 'weightPallet': va=clamp(toNum(A.unitWeightKg))*clamp(toNum(A.unitsPerPallet),1); vb=clamp(toNum(B.unitWeightKg))*clamp(toNum(B.unitsPerPallet),1); break; case 'sale': va=A.salePrice; vb=B.salePrice; break; default: va=(A.name||'').toLowerCase(); vb=(B.name||'').toLowerCase(); } if(va<vb) return -1*dir; if(va>vb) return 1*dir; return 0; }); filtered.forEach(({p,u})=>{ const row=document.createElement('div'); row.className='product'+(state.expanded[p.id]?' open':''); row.dataset.id=p.id; const palletProfit=u.profitUnit*clamp(toNum(p.unitsPerPallet),1); row.innerHTML=`
+    function renderProducts(){
+      productsEl.innerHTML='';
+      const sortByEl=$('#prodSortBy'); const sortDirEl=$('#prodSortDir'); const filterPosEl=$('#filterPos'); const filterNegEl=$('#filterNeg');
+      const items=state.products.map(p=>({p,u:computeUnit(p.salePrice,p.buyPrice,p.mlPercent,p.unitWeightKg,state.taxPercent)}));
+      const wantPos=!!(filterPosEl&&filterPosEl.checked); const wantNeg=!!(filterNegEl&&filterNegEl.checked);
+      const filtered=items.filter(({p,u})=>{ const pp=u.profitUnit*clamp(toNum(p.unitsPerPallet),1); if(!wantPos && !wantNeg) return true; if(wantPos && !wantNeg) return pp>=0; if(!wantPos && wantNeg) return pp<0; return true; });
+      const key=sortByEl?sortByEl.value:'name'; const dir=(sortDirEl?sortDirEl.value:'asc')==='asc'?1:-1;
+      filtered.sort((a,b)=>{ let va,vb; const A=a.p, B=b.p, Au=a.u, Bu=b.u; switch(key){ case 'profitUnit': va=Au.profitUnit; vb=Bu.profitUnit; break; case 'profitPallet': va=Au.profitUnit*clamp(toNum(A.unitsPerPallet),1); vb=Bu.profitUnit*clamp(toNum(B.unitsPerPallet),1); break; case 'weightPallet': va=clamp(toNum(A.unitWeightKg))*clamp(toNum(A.unitsPerPallet),1); vb=clamp(toNum(B.unitWeightKg))*clamp(toNum(B.unitsPerPallet),1); break; case 'sale': va=A.salePrice; vb=B.salePrice; break; default: va=(A.name||'').toLowerCase(); vb=(B.name||'').toLowerCase(); } if(va<vb) return -1*dir; if(va>vb) return 1*dir; return 0; });
+
+      filtered.forEach(({p,u})=>{
+        const palletProfit=u.profitUnit*clamp(toNum(p.unitsPerPallet),1);
+        const row=document.createElement('div'); row.className='product'+(state.expanded[p.id]?' open':''); row.dataset.id=p.id; row.innerHTML=`
           <div class="row1" data-toggle>
             <div class="swatch"></div>
             <div style="flex:1;min-width:0">
@@ -402,133 +410,35 @@
               <label><div class="sub">Taxa % ML (este produto)</div><input class="input" type="number" step="0.1" min="0" data-edit="mlpct" value="${p.mlPercent||14}"></label>
             </div>
           </div>`;
-      productsEl.appendChild(row);
-      const sw=row.querySelector('.swatch'); if(sw){ const col=colorFor(p); const pat=patternFor(p.colorIdx||0,col); const extra=(pat.bgSize?`background-size:${pat.bgSize};`:'')+(pat.bgPos?`background-position:${pat.bgPos};`:''); sw.style.backgroundColor=pat.bgColor; sw.style.backgroundImage=pat.bgImage; sw.style.cssText += ';'+extra; sw.style.borderColor=col }
-      row.querySelector('[data-toggle]').addEventListener('click',(e)=>{ if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') });
-      const bind=(sel,fn)=> row.querySelector(sel)?.addEventListener('input',fn);
-      bind('[data-edit="buy"]',e=>{ markEditing(); p.buyPrice=toNum(e.target.value); persist(); renderProducts(); renderTotals(); renderTruck(); });
-      bind('[data-edit="sale"]',e=>{ markEditing(); p.salePrice=toNum(e.target.value); persist(); renderProducts(); renderTotals(); renderTruck(); });
-      bind('[data-edit="units"]',e=>{ markEditing(); p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); renderProducts(); renderTotals(); renderTruck(); });
-      bind('[data-edit="weight"]',e=>{ markEditing(); p.unitWeightKg=toNum(e.target.value); persist(); renderProducts(); renderTotals(); renderTruck(); });
-      bind('[data-edit="mlpct"]',e=>{ markEditing(); p.mlPercent=toNum(e.target.value); persist(); renderProducts(); renderTotals(); renderTruck(); });
-    }); if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) } }
+        const sw=row.querySelector('.swatch'); if(sw){ const col=colorFor(p); const pat=patternFor(p.colorIdx||0,col); const extra=(pat.bgSize?`background-size:${pat.bgSize};`:'')+(pat.bgPos?`background-position:${pat.bgPos};`:''); sw.style.backgroundColor=pat.bgColor; sw.style.backgroundImage=pat.bgImage; sw.style.cssText += ';'+extra; sw.style.borderColor=col }
+        row.querySelector('[data-toggle]').addEventListener('click',(e)=>{ if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='SELECT')) return; state.expanded[p.id]=!state.expanded[p.id]; row.classList.toggle('open') });
+        const bind=(sel,fn)=> row.querySelector(sel)?.addEventListener('input',fn);
+        bind('[data-edit="buy"]',e=>{ markEditing(); p.buyPrice=toNum(e.target.value); persist(); renderProducts(); renderTotals(); renderTruck(); });
+        bind('[data-edit="sale"]',e=>{ markEditing(); p.salePrice=toNum(e.target.value); persist(); renderProducts(); renderTotals(); renderTruck(); });
+        bind('[data-edit="units"]',e=>{ markEditing(); p.unitsPerPallet=Math.max(1,Math.floor(toNum(e.target.value)||1)); persist(); renderProducts(); renderTotals(); renderTruck(); });
+        bind('[data-edit="weight"]',e=>{ markEditing(); p.unitWeightKg=toNum(e.target.value); persist(); renderProducts(); renderTotals(); renderTruck(); });
+        bind('[data-edit="mlpct"]',e=>{ markEditing(); p.mlPercent=toNum(e.target.value); persist(); renderProducts(); renderTotals(); renderTruck(); });
+        productsEl.appendChild(row);
+      });
+
+      if(filtered.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum produto após aplicar os filtros.'; productsEl.appendChild(empty) }
+    }
 
     function renderTotals(){ const v=getSelectedVehicle(); if(!v){ statProfit.textContent=brl(0); statWeight.textContent=`0 kg`; statFreight.textContent=brl(state.freight); statFinal.textContent=brl(0); if(statCost) statCost.textContent=brl(0); if(statMargin) statMargin.textContent=pctFmt(0); return } const { totalProfit, totalWeight, totalCost, totalRevenue } = vehicleTotals(v); const limit=toNum(v.maxWeightKg)||0; const exceeded=limit>0 && totalWeight>limit; statProfit.textContent=brl(totalProfit); statWeight.textContent=limit>0?`${(totalWeight).toLocaleString('pt-BR',{maximumFractionDigits:2})} kg de ${(limit).toLocaleString('pt-BR')} kg`:`${(totalWeight).toLocaleString('pt-BR',{maximumFractionDigits:2})} kg`; statWeight.style.color=exceeded?'#dc2626':''; if(statCost) statCost.textContent=brl(totalCost); statFreight.textContent=brl(state.freight); const final=totalProfit-clamp(toNum(state.freight)); statFinal.textContent=brl(final); statFinal.classList.remove('good','bad'); statFinal.classList.add('profit', final>=0?'good':'bad'); if(statMargin){ const marginTotalPct = totalRevenue>0 ? (totalProfit/totalRevenue)*100 : 0; statMargin.textContent=pctFmt(marginTotalPct); statMargin.style.color=marginTotalPct>=0?'#22c55e':'#ef4444'; } }
 
-    // --- Salvar frete (com pallets individuais) ---
+    // --- Snapshot de pallets e fretes salvos (mantidos da 2.3.6) ---
     function snapshotPallets(v){ ensureLayout(v); const layout=state.layouts[v.id]; const pallets=[]; let counter=1; layout.forEach(pid=>{ if(!pid) return; const p=state.products.find(x=>x.id===pid); if(!p) return; pallets.push({ id: uid('plt'), idx: counter++, productId: p.id, name: p.name, snapshot: { salePrice: toNum(p.salePrice), buyPrice: toNum(p.buyPrice), unitsPerPallet: Math.max(1, Math.floor(toNum(p.unitsPerPallet)||1)), unitWeightKg: toNum(p.unitWeightKg), mlPercent: toNum(p.mlPercent) }, realized: { salePrice: null, mlPercent: null } }); }); return pallets }
 
     function snapshotCurrentFreight(){ const v=getSelectedVehicle(); if(!v) return null; const pallets=snapshotPallets(v); const { totalProfit, totalWeight, totalCost, totalRevenue } = vehicleTotals(v); return { vehicle:{ name:v.name, capacity:v.capacity, rows:v.rows, cols:v.cols, maxWeightKg:v.maxWeightKg }, pallets, freight: clamp(toNum(state.freight)), taxPercent: clamp(toNum(state.taxPercent)), summaryPrev:{ totalProfit, totalWeight, totalCost, totalRevenue } } }
 
-    function openSaveFreight(){ const v=getSelectedVehicle(); if(!v){ alert('Cadastre e selecione um veículo antes.'); return } const snap=snapshotCurrentFreight(); if(!snap || (snap.pallets||[]).length===0){ alert('Nada para salvar (nenhum pallet no caminhão).'); return } $('#sfName').value=''; $('#sfDate').value=todayISO(); $('#sfNotes').value=''; $('#dlgSaveFreight').showModal(); $('#sfSave').onclick=()=>{ const name=($('#sfName').value||'').trim()||'Frete'; const date=$('#sfDate').value||todayISO(); const notes=$('#sfNotes').value||''; const rec={ id:uid('fre'), name, date, notes, createdAt:Date.now(), snapshot:snap }; state.savedFreights.push(rec); persist(); $('#dlgSaveFreight').close(); // abrir aba
-      $$('.tab').forEach(x=>x.classList.remove('active')); $(`.tab[data-tab="freights"]`).classList.add('active'); $('#viewMain').style.display='none'; $('#viewFreights').style.display='block'; renderSavedFreights(); } }
+    function openSaveFreight(){ const v=getSelectedVehicle(); if(!v){ alert('Cadastre e selecione um veículo antes.'); return } const snap=snapshotCurrentFreight(); if(!snap || (snap.pallets||[]).length===0){ alert('Nada para salvar (nenhum pallet no caminhão).'); return } $('#sfName').value=''; $('#sfDate').value=todayISO(); $('#sfNotes').value=''; $('#dlgSaveFreight').showModal(); $('#sfSave').onclick=()=>{ const name=($('#sfName').value||'').trim()||'Frete'; const date=$('#sfDate').value||todayISO(); const notes=$('#sfNotes').value||''; const rec={ id:uid('fre'), name, date, notes, createdAt:Date.now(), snapshot:snap }; state.savedFreights.push(rec); persist(); $('#dlgSaveFreight').close(); $$('.tab').forEach(x=>x.classList.remove('active')); $(`.tab[data-tab="freights"]`).classList.add('active'); $('#viewMain').style.display='none'; $('#viewFreights').style.display='block'; renderSavedFreights(); } }
 
-    // --- Render fretes salvos (lista + detalhe colapsável) ---
-    function computePallet(pallet, useReal=false, taxPercentOverride=null){
-      const sp=pallet.snapshot; const rz=pallet.realized||{}; const sale= useReal && rz.salePrice!=null ? rz.salePrice : sp.salePrice; const mlp= useReal && rz.mlPercent!=null ? rz.mlPercent : sp.mlPercent; const u=computeUnit(sale, sp.buyPrice, mlp, sp.unitWeightKg, taxPercentOverride??0);
-      const units=sp.unitsPerPallet; return { units, unit:u, revenuePallet: u.sale*units, mlPctPallet: u.mlPctVal*units, mlFixedPallet: u.mlFixed*units, taxPallet: u.taxVal*units, costPallet: sp.buyPrice*units, profitPallet: u.profitUnit*units, marginPct: u.marginUnitPct } }
+    function computePallet(pallet, useReal=false, taxPercentOverride=null){ const sp=pallet.snapshot; const rz=pallet.realized||{}; const sale= useReal && rz.salePrice!=null ? rz.salePrice : sp.salePrice; const mlp= useReal && rz.mlPercent!=null ? rz.mlPercent : sp.mlPercent; const u=computeUnit(sale, sp.buyPrice, mlp, sp.unitWeightKg, taxPercentOverride??0); const units=sp.unitsPerPallet; return { units, unit:u, revenuePallet: u.sale*units, mlPctPallet: u.mlPctVal*units, mlFixedPallet: u.mlFixed*units, taxPallet: u.taxVal*units, costPallet: sp.buyPrice*units, profitPallet: u.profitUnit*units, marginPct: u.marginUnitPct } }
 
-    function renderSavedFreights(){ const list=freightsListEl; list.innerHTML=''; const arr=Array.isArray(state.savedFreights)?state.savedFreights:[]; if(arr.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum frete salvo ainda.'; list.appendChild(empty); return }
-      // order desc by createdAt
-      arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-      arr.forEach(f=>{ const li=document.createElement('div'); li.className='list-item'; li.dataset.id=f.id; li.innerHTML=`
-          <div>
-            <div class="title">${f.name||'Frete'}</div>
-            <div class="meta">Data: ${f.date||todayISO()} • Criado: ${new Date(f.createdAt||Date.now()).toLocaleString('pt-BR')}</div>
-          </div>
-          <div class="meta">${(f.snapshot?.pallets?.length||0)} pallet(s)</div>`;
-        list.appendChild(li);
-        li.addEventListener('click',()=>{ // toggle detail below this item
-          const opened=li.nextElementSibling && li.nextElementSibling.classList.contains('freight-detail');
-          $$('.freight-detail').forEach(d=>d.remove());
-          if(opened) return; const detail=document.createElement('div'); detail.className='freight-detail';
-          const s=f.snapshot||{}; const pallets=Array.isArray(s.pallets)?s.pallets:[]; const taxP=clamp(toNum(s.taxPercent));
-          // Totais previsto
-          let prevRevenue=0, prevCost=0, prevProfit=0, prevMLpct=0, prevMLfix=0, prevTax=0; 
-          pallets.forEach(pl=>{ const c=computePallet(pl,false,taxP); prevRevenue+=c.revenuePallet; prevCost+=c.costPallet; prevProfit+=c.profitPallet; prevMLpct+=c.mlPctPallet; prevMLfix+=c.mlFixedPallet; prevTax+=c.taxPallet; });
-          // Totais realizado (apenas venda e ml% podem variar)
-          let rzRevenue=0, rzCost=0, rzProfit=0, rzMLpct=0, rzMLfix=0, rzTax=0;
-          pallets.forEach(pl=>{ const c=computePallet(pl,true,taxP); rzRevenue+=c.revenuePallet; rzCost+=c.costPallet; rzProfit+=c.profitPallet; rzMLpct+=c.mlPctPallet; rzMLfix+=c.mlFixedPallet; rzTax+=c.taxPallet; });
-          const freightFixed=clamp(toNum(s.freight));
-          const prevResult=prevProfit - freightFixed; const rzResult=rzProfit - freightFixed;
-          const prevMargin=prevRevenue>0? (prevProfit/prevRevenue)*100 : 0; const rzMargin=rzRevenue>0? (rzProfit/rzRevenue)*100 : 0;
-
-          function diffMoney(a,b){ const d=b-a; const cls=d>=0?'good':'bad'; const sign=d>0?'+':''; return `<span class="diff ${cls}">${sign}${brl(d)}</span>` }
-          function diffNum(a,b,sfx=''){ const d=b-a; const cls=d>=0?'good':'bad'; const sign=d>0?'+':''; return `<span class="diff ${cls}">${sign}${(d).toLocaleString('pt-BR',{maximumFractionDigits:2})}${sfx}</span>` }
-
-          // Header e totais
-          detail.innerHTML = `
-            <div class="fd-head">
-              <div style="display:flex;gap:8px;align-items:center">
-                <input class="input" style="max-width:260px" value="${f.name||''}" data-hdr="name" />
-                <input class="input" type="date" value="${f.date||todayISO()}" data-hdr="date" style="max-width:160px" />
-              </div>
-              <div class="badge">Frete (fixo): ${brl(f.snapshot?.freight||0)}</div>
-            </div>
-            <div class="fd-grid">
-              <div class="badge">Previsto — Receita: ${brl(prevRevenue)} • Custo: ${brl(prevCost)} • ML%: ${brl(prevMLpct)} • ML fixa: ${brl(prevMLfix)} • Imposto: ${brl(prevTax)}</div>
-              <div class="badge">Realizado — Receita: ${brl(rzRevenue)} ${diffMoney(prevRevenue,rzRevenue)} • Custo: ${brl(rzCost)} ${diffMoney(prevCost,rzCost)} • ML%: ${brl(rzMLpct)} ${diffMoney(prevMLpct,rzMLpct)} • ML fixa: ${brl(rzMLfix)} ${diffMoney(prevMLfix,rzMLfix)} • Imposto: ${brl(rzTax)} ${diffMoney(prevTax,rzTax)}</div>
-              <div class="badge">Resultado Previsto: ${brl(prevResult)} • Margem: ${pctFmt(prevMargin)}</div>
-              <div class="badge">Resultado Realizado: ${brl(rzResult)} ${diffMoney(prevResult,rzResult)} • Margem: ${pctFmt(rzMargin)}</div>
-            </div>
-            <div class="pallets" id="pls_${f.id}"></div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-              <button class="btn secondary" data-dup>Duplicar</button>
-              <button class="btn danger" data-del>Excluir</button>
-            </div>`;
-
-          li.insertAdjacentElement('afterend', detail);
-
-          // Bind header edits
-          detail.querySelector('input[data-hdr="name"]').addEventListener('input',e=>{ f.name=e.target.value; persist(); li.querySelector('.title').textContent=f.name||'Frete'; });
-          detail.querySelector('input[data-hdr="date"]').addEventListener('input',e=>{ f.date=e.target.value; persist(); li.querySelector('.meta').innerHTML=`Data: ${f.date||todayISO()} • Criado: ${new Date(f.createdAt||Date.now()).toLocaleString('pt-BR')}`; });
-          detail.querySelector('[data-del]').addEventListener('click',()=>{ if(confirm('Excluir este frete salvo?')){ state.savedFreights=state.savedFreights.filter(x=>x.id!==f.id); persist(); renderSavedFreights(); }});
-          detail.querySelector('[data-dup]').addEventListener('click',()=>{ const copy=JSON.parse(JSON.stringify(f)); copy.id=uid('fre'); copy.name=(copy.name||'')+' (cópia)'; copy.createdAt=Date.now(); state.savedFreights.unshift(copy); persist(); renderSavedFreights(); });
-
-          // Render pallets list
-          const pls=detail.querySelector('#pls_'+f.id);
-          pallets.forEach((pl,idx)=>{
-            const cPrev=computePallet(pl,false,taxP); const cRz=computePallet(pl,true,taxP);
-            const row=document.createElement('div'); row.className='pallet'; row.innerHTML=`
-              <div class="pallet-head">
-                <div style="display:flex;gap:8px;align-items:center"><span class="pill">#${idx+1}</span> <strong>${pl.name}</strong></div>
-                <div class="pill">Unid/pallet: ${cPrev.units} • Peso unit.: ${(pl.snapshot.unitWeightKg||0).toLocaleString('pt-BR',{maximumFractionDigits:2})} kg</div>
-              </div>
-              <div class="cols">
-                <div class="rows">
-                  <div class="row"><span class="lab">Prev. Receita</span><span class="val">${brl(cPrev.revenuePallet)}</span></div>
-                  <div class="row"><span class="lab">Prev. ML%</span><span class="val">${brl(cPrev.mlPctPallet)}</span></div>
-                  <div class="row"><span class="lab">Prev. ML fixa</span><span class="val">${brl(cPrev.mlFixedPallet)}</span></div>
-                  <div class="row"><span class="lab">Prev. Imposto</span><span class="val">${brl(cPrev.taxPallet)}</span></div>
-                  <div class="row"><span class="lab">Prev. Custo</span><span class="val">${brl(cPrev.costPallet)}</span></div>
-                  <div class="row"><span class="lab">Prev. Lucro</span><span class="val">${brl(cPrev.profitPallet)}</span></div>
-                </div>
-                <div class="rows">
-                  <label><div class="sub">Real. Preço venda (R$)</div><input class="input" type="number" step="0.01" min="0" data-rz="sale" value="${pl.realized?.salePrice??''}" placeholder="${pl.snapshot.salePrice}"></label>
-                  <label><div class="sub">Real. Taxa % ML</div><input class="input" type="number" step="0.1" min="0" data-rz="mlp" value="${pl.realized?.mlPercent??''}" placeholder="${pl.snapshot.mlPercent}"></label>
-                  <div class="row"><span class="lab">Real. Receita</span><span class="val">${brl(cRz.revenuePallet)} ${diffMoney(cPrev.revenuePallet,cRz.revenuePallet)}</span></div>
-                  <div class="row"><span class="lab">Real. ML%</span><span class="val">${brl(cRz.mlPctPallet)} ${diffMoney(cPrev.mlPctPallet,cRz.mlPctPallet)}</span></div>
-                  <div class="row"><span class="lab">Real. ML fixa</span><span class="val">${brl(cRz.mlFixedPallet)} ${diffMoney(cPrev.mlFixedPallet,cRz.mlFixedPallet)}</span></div>
-                  <div class="row"><span class="lab">Real. Imposto</span><span class="val">${brl(cRz.taxPallet)} ${diffMoney(cPrev.taxPallet,cRz.taxPallet)}</span></div>
-                  <div class="row"><span class="lab">Real. Custo</span><span class="val">${brl(cRz.costPallet)} ${diffMoney(cPrev.costPallet,cRz.costPallet)}</span></div>
-                  <div class="row"><span class="lab">Real. Lucro</span><span class="val">${brl(cRz.profitPallet)} ${diffMoney(cPrev.profitPallet,cRz.profitPallet)}</span></div>
-                </div>
-              </div>`;
-            // bind edits
-            row.querySelector('input[data-rz="sale"]').addEventListener('input',e=>{ pl.realized=pl.realized||{}; pl.realized.salePrice=toNum(e.target.value); persist(); renderSavedFreights(); // re-render to atualizar totais
-            });
-            row.querySelector('input[data-rz="mlp"]').addEventListener('input',e=>{ pl.realized=pl.realized||{}; pl.realized.mlPercent=toNum(e.target.value); persist(); renderSavedFreights(); });
-
-            pls.appendChild(row);
-          });
-        });
-      })
-    }
+    function renderSavedFreights(){ const list=freightsListEl; list.innerHTML=''; const arr=Array.isArray(state.savedFreights)?state.savedFreights:[]; if(arr.length===0){ const empty=document.createElement('div'); empty.className='badge'; empty.textContent='Nenhum frete salvo ainda.'; list.appendChild(empty); return } arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); arr.forEach(f=>{ const li=document.createElement('div'); li.className='list-item'; li.dataset.id=f.id; li.innerHTML=`<div><div class="title">${f.name||'Frete'}</div><div class="meta">Data: ${f.date||todayISO()} • Criado: ${new Date(f.createdAt||Date.now()).toLocaleString('pt-BR')}</div></div><div class="meta">${(f.snapshot?.pallets?.length||0)} pallet(s)</div>`; list.appendChild(li); li.addEventListener('click',()=>{ const opened=li.nextElementSibling && li.nextElementSibling.classList.contains('freight-detail'); $$('.freight-detail').forEach(d=>d.remove()); if(opened) return; const detail=document.createElement('div'); detail.className='freight-detail'; const s=f.snapshot||{}; const pallets=Array.isArray(s.pallets)?s.pallets:[]; const taxP=clamp(toNum(s.taxPercent)); let prevRevenue=0, prevCost=0, prevProfit=0, prevMLpct=0, prevMLfix=0, prevTax=0; pallets.forEach(pl=>{ const c=computePallet(pl,false,taxP); prevRevenue+=c.revenuePallet; prevCost+=c.costPallet; prevProfit+=c.profitPallet; prevMLpct+=c.mlPctPallet; prevMLfix+=c.mlFixedPallet; prevTax+=c.taxPallet; }); let rzRevenue=0, rzCost=0, rzProfit=0, rzMLpct=0, rzMLfix=0, rzTax=0; pallets.forEach(pl=>{ const c=computePallet(pl,true,taxP); rzRevenue+=c.revenuePallet; rzCost+=c.costPallet; rzProfit+=c.profitPallet; rzMLpct+=c.mlPctPallet; rzMLfix+=c.mlFixedPallet; rzTax+=c.taxPallet; }); const freightFixed=clamp(toNum(s.freight)); const prevResult=prevProfit - freightFixed; const rzResult=rzProfit - freightFixed; const prevMargin=prevRevenue>0? (prevProfit/prevRevenue)*100 : 0; const rzMargin=rzRevenue>0? (rzProfit/rzRevenue)*100 : 0; function diffMoney(a,b){ const d=b-a; const cls=d>=0?'good':'bad'; const sign=d>0?'+':''; return `<span class="diff ${cls}">${sign}${brl(d)}</span>` } function diffNum(a,b,sfx=''){ const d=b-a; const cls=d>=0?'good':'bad'; const sign=d>0?'+':''; return `<span class="diff ${cls}">${sign}${(d).toLocaleString('pt-BR',{maximumFractionDigits:2})}${sfx}</span>` } detail.innerHTML = `<div class="fd-head"><div style="display:flex;gap:8px;align-items:center"><input class="input" style="max-width:260px" value="${f.name||''}" data-hdr="name" /><input class="input" type="date" value="${f.date||todayISO()}" data-hdr="date" style="max-width:160px" /></div><div class="badge">Frete (fixo): ${brl(f.snapshot?.freight||0)}</div></div><div class="fd-grid"><div class="badge">Previsto — Receita: ${brl(prevRevenue)} • Custo: ${brl(prevCost)} • ML%: ${brl(prevMLpct)} • ML fixa: ${brl(prevMLfix)} • Imposto: ${brl(prevTax)}</div><div class="badge">Realizado — Receita: ${brl(rzRevenue)} ${diffMoney(prevRevenue,rzRevenue)} • Custo: ${brl(rzCost)} ${diffMoney(prevCost,rzCost)} • ML%: ${brl(rzMLpct)} ${diffMoney(prevMLpct,rzMLpct)} • ML fixa: ${brl(rzMLfix)} ${diffMoney(prevMLfix,rzMLfix)} • Imposto: ${brl(rzTax)} ${diffMoney(prevTax,rzTax)}</div><div class="badge">Resultado Previsto: ${brl(prevResult)} • Margem: ${pctFmt(prevMargin)}</div><div class="badge">Resultado Realizado: ${brl(rzResult)} ${diffMoney(prevResult,rzResult)} • Margem: ${pctFmt(rzMargin)}</div></div><div class="pallets" id="pls_${f.id}"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button class="btn secondary" data-dup>Duplicar</button><button class="btn danger" data-del>Excluir</button></div>`; li.insertAdjacentElement('afterend', detail); detail.querySelector('input[data-hdr="name"]').addEventListener('input',e=>{ f.name=e.target.value; persist(); li.querySelector('.title').textContent=f.name||'Frete'; }); detail.querySelector('input[data-hdr="date"]').addEventListener('input',e=>{ f.date=e.target.value; persist(); li.querySelector('.meta').innerHTML=`Data: ${f.date||todayISO()} • Criado: ${new Date(f.createdAt||Date.now()).toLocaleString('pt-BR')}`; }); detail.querySelector('[data-del]').addEventListener('click',()=>{ if(confirm('Excluir este frete salvo?')){ state.savedFreights=state.savedFreights.filter(x=>x.id!==f.id); persist(); renderSavedFreights(); }}); detail.querySelector('[data-dup]').addEventListener('click',()=>{ const copy=JSON.parse(JSON.stringify(f)); copy.id=uid('fre'); copy.name=(copy.name||'')+' (cópia)'; copy.createdAt=Date.now(); state.savedFreights.unshift(copy); persist(); renderSavedFreights(); }); const pls=detail.querySelector('#pls_'+f.id); pallets.forEach((pl,idx)=>{ const cPrev=computePallet(pl,false,taxP); const cRz=computePallet(pl,true,taxP); const row=document.createElement('div'); row.className='pallet'; row.innerHTML=`<div class="pallet-head"><div style="display:flex;gap:8px;align-items:center"><span class="pill">#${idx+1}</span> <strong>${pl.name}</strong></div><div class="pill">Unid/pallet: ${cPrev.units} • Peso unit.: ${(pl.snapshot.unitWeightKg||0).toLocaleString('pt-BR',{maximumFractionDigits:2})} kg</div></div><div class="cols"><div class="rows"><div class="row"><span class="lab">Prev. Receita</span><span class="val">${brl(cPrev.revenuePallet)}</span></div><div class="row"><span class="lab">Prev. ML%</span><span class="val">${brl(cPrev.mlPctPallet)}</span></div><div class="row"><span class="lab">Prev. ML fixa</span><span class="val">${brl(cPrev.mlFixedPallet)}</span></div><div class="row"><span class="lab">Prev. Imposto</span><span class="val">${brl(cPrev.taxPallet)}</span></div><div class="row"><span class="lab">Prev. Custo</span><span class="val">${brl(cPrev.costPallet)}</span></div><div class="row"><span class="lab">Prev. Lucro</span><span class="val">${brl(cPrev.profitPallet)}</span></div></div><div class="rows"><label><div class="sub">Real. Preço venda (R$)</div><input class="input" type="number" step="0.01" min="0" data-rz="sale" value="${pl.realized?.salePrice??''}" placeholder="${pl.snapshot.salePrice}"></label><label><div class="sub">Real. Taxa % ML</div><input class="input" type="number" step="0.1" min="0" data-rz="mlp" value="${pl.realized?.mlPercent??''}" placeholder="${pl.snapshot.mlPercent}"></label><div class="row"><span class="lab">Real. Receita</span><span class="val">${brl(cRz.revenuePallet)} ${diffMoney(cPrev.revenuePallet,cRz.revenuePallet)}</span></div><div class="row"><span class="lab">Real. ML%</span><span class="val">${brl(cRz.mlPctPallet)} ${diffMoney(cPrev.mlPctPallet,cRz.mlPctPallet)}</span></div><div class="row"><span class="lab">Real. ML fixa</span><span class="val">${brl(cRz.mlFixedPallet)} ${diffMoney(cPrev.mlFixedPallet,cRz.mlFixedPallet)}</span></div><div class="row"><span class="lab">Real. Imposto</span><span class="val">${brl(cRz.taxPallet)} ${diffMoney(cPrev.taxPallet,cRz.taxPallet)}</span></div><div class="row"><span class="lab">Real. Custo</span><span class="val">${brl(cRz.costPallet)} ${diffMoney(cPrev.costPallet,cRz.costPallet)}</span></div><div class="row"><span class="lab">Real. Lucro</span><span class="val">${brl(cRz.profitPallet)} ${diffMoney(cPrev.profitPallet,cRz.profitPallet)}</span></div></div></div>`; row.querySelector('input[data-rz="sale"]').addEventListener('input',e=>{ pl.realized=pl.realized||{}; pl.realized.salePrice=toNum(e.target.value); persist(); renderSavedFreights(); }); row.querySelector('input[data-rz="mlp"]').addEventListener('input',e=>{ pl.realized=pl.realized||{}; pl.realized.mlPercent=toNum(e.target.value); persist(); renderSavedFreights(); }); pls.appendChild(row); }); }); }); }
 
     function initControls(){
-      // Sincronização
       $('#btnOpenSync')?.addEventListener('click',()=>{ syncFillFields(); $('#dlgSync').showModal(); });
-      // Inputs principais
       $('#btnClearLoad') && $('#btnClearLoad').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; ensureLayout(v); state.layouts[v.id]=Array(v.capacity).fill(null); persist(); renderTruck(); renderTotals(); });
       $('#btnDeleteVehicle') && $('#btnDeleteVehicle').addEventListener('click',()=>{ const v=getSelectedVehicle(); if(!v)return; state.vehicles=state.vehicles.filter(x=>x.id!==v.id); delete state.layouts[v.id]; state.selectedVehicleId=(state.vehicles[0]&&state.vehicles[0].id)||null; persist(); renderVehicles(); renderTruck(); renderTotals(); });
       const openProd=()=>$('#dlgProduct').showModal(); $('#btnNewProduct')&&$('#btnNewProduct').addEventListener('click',openProd); $('#btnNewProduct2')&&$('#btnNewProduct2').addEventListener('click',openProd);
@@ -539,7 +449,6 @@
 
       $('#btnSaveFreight')?.addEventListener('click', openSaveFreight);
 
-      // Picker modal close
       $$('#dlgPicker [data-close]').forEach(b=>b.addEventListener('click',()=>$('#dlgPicker').close()));
     }
 
